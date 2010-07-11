@@ -411,7 +411,7 @@ int send_request(forensic1394_dev *dev,
     if (ioctl(dev->pdev->fd, FW_CDEV_IOC_SEND_REQUEST, &request) == -1)
     {
         perror("Send request");
-	return 0;
+        return 0;
     }
 
     // Keep going until we get a response
@@ -442,7 +442,7 @@ int send_request(forensic1394_dev *dev,
         else
         {
             perror("Read event");
-	    return 0;
+            return 0;
         }
     }
 
