@@ -400,7 +400,6 @@ forensic1394_result send_request(forensic1394_dev *dev,
     request.closure     = 0;
     request.generation  = dev->pdev->generation;
 
-
     // Make the request
     if (ioctl(dev->pdev->fd, FW_CDEV_IOC_SEND_REQUEST, &request) == -1)
     {
@@ -415,7 +414,7 @@ forensic1394_result send_request(forensic1394_dev *dev,
         char buffer[16 * 1024];
         union fw_cdev_event *event = (void *) buffer;
 
-        // Read the reponse to our request; blocking if need be
+        // Read an event from the device; blocking if need be
         response_len = read(dev->pdev->fd, buffer, 16*1024);
 
         if (response_len != -1) switch (event->common.type)
@@ -423,25 +422,34 @@ forensic1394_result send_request(forensic1394_dev *dev,
             // We have a response to our request (input or output)
             case FW_CDEV_EVENT_RESPONSE:
             {
-                // If we are expecting some output
-                if (out)
+                // Check the response code
+                switch (event->response.rcode)
                 {
-                    // Ensure that we got what we requested
-                    if (response_len == (sizeof(struct fw_cdev_event_response)) + outlen)
-                    {
-                        memcpy(out, event->response.data, outlen);
-                    }
-                    // Otherwise we've got an I/O error
-                    else
-                    {
+                    // Request was okay; continue processing
+                    case RCODE_COMPLETE:
+                        break;
+                    case RCODE_BUSY:
+                        return FORENSIC1394_RESULT_BUSY;
+                        break;
+                    // Different generations are a consequence of bus resets
+                    case RCODE_GENERATION:
+                        return FORENSIC1394_RESULT_BUS_RESET;
+                        break;
+                    default:
                         return FORENSIC1394_RESULT_IO_ERROR;
-                    }
+                        break;
                 }
 
-                // Not expecting output, or got output, either way, success
+                // If we are expecting some output
+                if (out && event->response.length == outlen)
+                {
+                    memcpy(out, event->response.data, outlen);
+                }
+
                 return FORENSIC1394_RESULT_SUCCESS;
                 break;
             }
+            // Ignore everything else
             default:
                 break;
         }
