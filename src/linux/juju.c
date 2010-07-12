@@ -40,8 +40,6 @@
 #define PTR_TO_U64(p) ((__u64)(p))
 #define U64_TO_PTR(p) ((void *)(__u64)(p)
 
-#define ARRAY_E(a) (sizeof(a) / sizeof(*a))
-
 /*
  * These constants come from linux/drivers/firewire/fw-device.h and are used
  * as the `key' field when adding a local unit directory.
@@ -59,24 +57,6 @@ struct _platform_dev
     char path[64];
     int fd;
     int generation;
-};
-
-static const uint32_t sbp2_unit_dir[] =
-{
-    0xd0000,        // Entry count (13 << 16)
-    0x1200609e,     // Spec ID
-    0x13010483,     // Version
-    0x21000001,     // Revision
-    0x3a000a08,     // Unit char
-    0x3e004c10,     // Fast start
-    0x3800609e,     // Command set spec
-    0x390104d8,     // SCSI
-    0x3b000000,     // Command set rev
-    0x3c0a2700,     // Firmware rev
-    0x54004000,     // -->
-    0x3d000003,     // Reconnect timeout
-    0x140e0000,     // Logical unit number
-    0x17000021     // Model
 };
 
 static forensic1394_dev *alloc_dev(const char *devpath,
@@ -125,7 +105,8 @@ void platform_bus_destory(forensic1394_bus *bus)
     free(bus->pbus);
 }
 
-int platform_enable_sbp2(forensic1394_bus *bus)
+int platform_enable_sbp2(forensic1394_bus *bus, const uint32_t *sbp2dir,
+                         size_t len)
 {
     int i;
     glob_t globdev;
@@ -163,8 +144,8 @@ int platform_enable_sbp2(forensic1394_bus *bus)
         {
             struct fw_cdev_add_descriptor add_desc = {};
 
-            add_desc.data   = PTR_TO_U64(sbp2_unit_dir);
-            add_desc.length = ARRAY_E(sbp2_unit_dir);
+            add_desc.data   = PTR_TO_U64(sbp2dir);
+            add_desc.length = len;
             add_desc.key    = (CSR_DIRECTORY | CSR_UNIT) << 24;
 
             if (ioctl(fd, FW_CDEV_IOC_ADD_DESCRIPTOR, &add_desc) == -1)

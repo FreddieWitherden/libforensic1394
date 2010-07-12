@@ -80,8 +80,11 @@ void platform_bus_destory(forensic1394_bus *bus)
     free(bus->pbus);
 }
 
-int platform_enable_sbp2(forensic1394_bus *bus)
+int platform_enable_sbp2(forensic1394_bus *bus, const uint32_t *sbp2dir,
+                         size_t len)
 {
+    int i;
+
     CFMutableDictionaryRef matchingDict;
 
     io_iterator_t iterator;
@@ -133,20 +136,16 @@ int platform_enable_sbp2(forensic1394_bus *bus)
                                                          CFUUIDGetUUIDBytes(kIOFireWireLocalUnitDirectoryInterfaceID));
 
 
-    // SBP-2
-    (*localUnitDir)->AddEntry_UInt32(localUnitDir, 0x12, 0x00609e, NULL);
-    (*localUnitDir)->AddEntry_UInt32(localUnitDir, 0x13, 0x010483, NULL);
-    (*localUnitDir)->AddEntry_UInt32(localUnitDir, 0x21, 0x000001, NULL);
-    (*localUnitDir)->AddEntry_UInt32(localUnitDir, 0x3a, 0x000a08, NULL);
-    (*localUnitDir)->AddEntry_UInt32(localUnitDir, 0x3e, 0x004c10, NULL);
-    (*localUnitDir)->AddEntry_UInt32(localUnitDir, 0x38, 0x00609e, NULL);
-    (*localUnitDir)->AddEntry_UInt32(localUnitDir, 0x39, 0x0104d8, NULL);
-    (*localUnitDir)->AddEntry_UInt32(localUnitDir, 0x3b, 0x000000, NULL);
-    (*localUnitDir)->AddEntry_UInt32(localUnitDir, 0x3c, 0x0a2700, NULL);
-    (*localUnitDir)->AddEntry_UInt32(localUnitDir, 0x54, 0x004000, NULL);
-    (*localUnitDir)->AddEntry_UInt32(localUnitDir, 0x3d, 0x000003, NULL);
-    (*localUnitDir)->AddEntry_UInt32(localUnitDir, 0x14, 0x0e0000, NULL);
-    (*localUnitDir)->AddEntry_UInt32(localUnitDir, 0x17, 0x000021, NULL);
+    // Add the unit directory, ignoring the first entry
+    for (i = 1; i < len; i++)
+    {
+        // The entries are passed as <8-bit key><24-bit value>
+        UInt32 key      = sbp2dir[i] >> 24;
+        UInt32 value    = sbp2dir[i] & 0x00ffffff;
+
+        // Add the key-value pair to the local unit directory
+        (*localUnitDir)->AddEntry_UInt32(localUnitDir, key, value, NULL);
+    }
 
     // Publish this unit directory
     (*localUnitDir)->Publish(localUnitDir);

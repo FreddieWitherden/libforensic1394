@@ -26,6 +26,36 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define ARRAY_E(a) (sizeof(a) / sizeof(*a))
+
+/*
+ * SBP-2 unit directory.  The entries are in the form <8-bit key><24-bit value>.
+ * Precise definitions of the keys and associated values can be found in the
+ * SBP-2 specification.
+ *
+ * The unit directory includes the number of elements in the directory as the
+ * first entry.  However the CRC16 is *not* computed.  Platform APIs which do
+ * not require the entry count (such as IOKit) should skip over the first
+ * entry.
+ */
+static const uint32_t sbp2_unit_dir[] =
+{
+    0x000d0000,     // # entries, 13 << 16
+    0x1200609e,     // Spec ID
+    0x13010483,     // Version
+    0x21000001,     // Revision
+    0x3a000a08,     // Unit char
+    0x3e004c10,     // Fast start
+    0x3800609e,     // Command set spec
+    0x390104d8,     // SCSI
+    0x3b000000,     // Command set rev
+    0x3c0a2700,     // Firmware rev
+    0x54004000,     // -->
+    0x3d000003,     // Reconnect timeout
+    0x140e0000,     // Logical unit number
+    0x17000021      // Model
+};
+
 static void forensic1394_destroy_all_devices(forensic1394_bus *bus);
 
 forensic1394_bus *forensic1394_alloc(void)
@@ -81,7 +111,8 @@ int forensic1394_enable_sbp2(forensic1394_bus *bus)
         return 1;
     }
 
-    bus->sbp2Enabled = platform_enable_sbp2(bus);
+    bus->sbp2Enabled = platform_enable_sbp2(bus, sbp2_unit_dir,
+                                            ARRAY_E(sbp2_unit_dir));
 
     return bus->sbp2Enabled;
 }
