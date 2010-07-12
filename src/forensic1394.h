@@ -56,6 +56,22 @@
  * forensic1394_close_device(dev[0]); forensic1394_destroy(bus);
  * \endcode
  *
+ * \par Handling bus resets
+ * Bus resets occur when devices are added/removed from the system or when the
+ *  configuration ROM of a device is updated.  The following methods are
+ *  affected by bus resets:
+ *
+ *   - \c forensic1394_open_device
+ *   - \c forensic1394_read_device
+ *   - \c forensic1394_read_device
+ *
+ * After a bus reset calls to all three of these methods will result in
+ *  \c FORENSIC1394_RESULT_BUS_RESET being returned.  Applications should
+ *  handle this by saving the GUIDs of any devices being accessed and then call
+ *  \c forensic1394_get_devices.  Calling this will void all device handles.
+ *  The new list of devices can then be iterated through and their GUIDs
+ *  compared against saved GUIDs.
+ *
  * \author Freddie Witherden
  */
 
@@ -83,11 +99,11 @@ typedef struct _forensic1394_dev forensic1394_dev;
  * \brief Possible return status codes.
  *
  * The possible return codes for a forensic1394 function.  In general methods
- * return 0 on success and a negative integer on failure.  These codes may be
- * used to ascertain precisely why a method failed.
+ *  return 0 on success and a negative integer on failure.  These codes may be
+ *  used to ascertain precisely why a method failed.
  *
  * It is worth noting that invalid input parameters are handled with assertions
- * as opposed to status codes.
+ *  as opposed to status codes.
  *
  * \sa forensic1394_get_result_str
  */
@@ -113,26 +129,26 @@ typedef enum
 
 /**
  * Allocates and initialises a new handle to the systems firewire
- * bus. This bus can then be used to query the devices attached to the
- * bus and to update the configuration status ROM (`CSR') of the bus.
+ *  bus.  This bus can then be used to query the devices attached to the
+ *  bus and to update the configuration status ROM (`CSR') of the bus.
  *
- * @return A handle to a forensic1394_bus on success, NULL otherwise.
+ *  \return A handle to a forensic1394_bus on success, NULL otherwise.
  */
 FORENSIC1394_DECL forensic1394_bus *
 forensic1394_alloc(void);
 
 /**
  * Updates the configuration status ROM of the bus to contain an SBP-2
- * unit directory. This is required in order for some connected
- * devices to allow for direct memory access (`DMA').
+ *  unit directory.  This is required in order for some connected
+ *  devices to allow for direct memory access (`DMA').
  *
  * Note that this is usually a global change, affecting all firewire
- * ports on the system.
+ *  ports on the system.
  *
  * As calling this method usually results in a bus reset it is advisable to
- * call it as soon as a bus is available.
+ *  call it as soon as a bus is available.
  *
- * @param bus The 1394 bus to add the SBP-2 unit directory to.
+ *   \param bus The 1394 bus to add the SBP-2 unit directory to.
  */
 FORENSIC1394_DECL forensic1394_result
 forensic1394_enable_sbp2(forensic1394_bus *bus);
@@ -141,7 +157,7 @@ forensic1394_enable_sbp2(forensic1394_bus *bus);
  * Gets the list of (foreign) devices attached to the firewire bus.
  *
  * The list of devices returned by this method is NULL terminated, making it
- * possible to iterate over the list with a while loop.
+ *  possible to iterate over the list with a while loop.
  */
 FORENSIC1394_DECL forensic1394_dev **
 forensic1394_get_devices(forensic1394_bus *bus,
@@ -149,30 +165,30 @@ forensic1394_get_devices(forensic1394_bus *bus,
 
 /**
  * Destroys a bus handle, releasing all of the memory associated with
- * the handle.
+ *  the handle.
  *
  * After a call to this method all forensic1394 device handles are
- * invalidated.
+ *  invalidated.
  *
- * @param bus The forensic1394_bus to destroy.
+ *  \param bus The forensic1394_bus to destroy.
  */
 FORENSIC1394_DECL void
 forensic1394_destroy(forensic1394_bus *bus);
 
 /**
- * Attempts to open up the firewire device dev. It is necessary to open a
- * device before attempting to read/write from it.
+ * Attempts to open up the firewire device dev.  It is necessary to open a
+ *  device before attempting to read/write from it.
  *
- * @param dev The device to open.
- * @return True if the device was successfully opened; false otherwise.
+ *   \param dev The device to open.
+ *  \return True if the device was successfully opened; false otherwise.
  */
 FORENSIC1394_DECL forensic1394_result
 forensic1394_open_device(forensic1394_dev *dev);
 
 /**
- * Closes the firewire device dev. This can only be called on an open device.
+ * Closes the firewire device dev.  This can only be called on an open device.
  *
- * @param dev The device to close.
+ *   \param dev The device to close.
  */
 FORENSIC1394_DECL void
 forensic1394_close_device(forensic1394_dev *dev);
@@ -180,26 +196,26 @@ forensic1394_close_device(forensic1394_dev *dev);
 /**
  * Determines if the firewire device dev is open or not.
  *
- * @param dev The firewire device.
- * @return True if the device is open; false otherwise.
+ *   \param dev The firewire device.
+ *  \return True if the device is open; false otherwise.
  */
 FORENSIC1394_DECL forensic1394_result
 forensic1394_device_is_open(forensic1394_dev *dev);
 
 /**
  * Performs a blocking (synchronous) read on the device dev, starting at the
- * address addr and attempting to read len bytes. The resulting bytes are copied
- * into buf.
+ *  address addr and attempting to read len bytes. The resulting bytes are
+ *  copied into buf.
  *
  * It is worth noting that many devices impose a limit on the maximum transfer
  * size. 512 bytes is usually a safe bet, however, YMMV.
  *
- * @param dev The firewire device.
- * @param addr The memory address to read from.
- * @param len The number of bytes to read.
- * @param buf The buffer to copy the read bytes into, must be at least len in
- *            size.
- * @return ...
+ *   \param dev The firewire device.
+ *   \param addr The memory address to read from.
+ *   \param len The number of bytes to read.
+ *   \param buf The buffer to copy the read bytes into, must be at least len in
+ *              size.
+ *  \return ...
  */
 FORENSIC1394_DECL forensic1394_result
 forensic1394_read_device(forensic1394_dev *dev,
@@ -215,10 +231,10 @@ forensic1394_write_device(forensic1394_dev *dev,
 
 /**
  * Fetches the configuration status ROM (`csr') for the device and copies it
- * into ROM. rom is assumed to be at least 1024 bytes in size (256 entires).
+ *  into ROM. rom is assumed to be at least 1024 bytes in size (256 entires).
  *
- * @param dev The device.
- * @param rom The pointer to copy the CSR into.
+ *   \param dev The device.
+ *   \param rom The pointer to copy the CSR into.
  */
 FORENSIC1394_DECL void
 forensic1394_get_device_csr(forensic1394_dev *dev,
@@ -243,7 +259,7 @@ forensic1394_get_device_vendor_id(forensic1394_dev *dev);
  * \brief Converts a return status code to a string.
  *
  * Returns a textual representation of the return status code \a result.  The
- * string returned is guarenteed to be valid for the lifetime of the program.
+ *  string returned is guarenteed to be valid for the lifetime of the program.
  *
  * In the event of an invalid code NULL is returned.
  *
