@@ -60,7 +60,7 @@ struct _platform_dev
 };
 
 static forensic1394_dev *alloc_dev(const char *devpath,
-                                   uint32_t nodeid, uint32_t generation,
+                                   const struct fw_cdev_event_bus_reset *reset,
                                    const uint32_t *rom);
 
 /**
@@ -210,8 +210,7 @@ void platform_update_device_list(forensic1394_bus *bus)
         {
             // Allocate memory for the device
             forensic1394_dev *currdev = alloc_dev(devpath,
-                                                  reset.node_id,
-                                                  reset.generation,
+                                                  &reset,
                                                   rom);
 
             // See if we need to extend the device list; +1 as the last device
@@ -281,7 +280,7 @@ int platform_write_device(forensic1394_dev *dev,
 }
 
 forensic1394_dev *alloc_dev(const char *devpath,
-                            uint32_t node_id, uint32_t generation,
+                            const struct fw_cdev_event_bus_reset *reset,
                             const uint32_t *rom)
 {
     char tmp[128];
@@ -305,8 +304,8 @@ forensic1394_dev *alloc_dev(const char *devpath,
     memcpy(dev->rom, rom, sizeof(dev->rom));
 
     // Same with the node ID and generation
-    dev->nodeid = node_id;
-    dev->pdev->generation = generation;
+    dev->nodeid = reset->node_id;
+    dev->pdev->generation = reset->generation;
 
     // Product name
     read_fw_sysfs_prop(devpath, "model_name",
