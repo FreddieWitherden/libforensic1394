@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <errno.h>
 #include <sys/ioctl.h>
 #include <linux/firewire-cdev.h>
 
@@ -77,11 +78,11 @@ static forensic1394_dev *alloc_dev(const char *devpath,
 static void read_fw_sysfs_prop(const char *devpath, const char *prop,
                                char *contents, size_t maxb);
 
-static int send_request(forensic1394_dev *dev,
-                        int tcode,
-                        uint64_t addr,
-                        size_t inlen, void *in,
-                        size_t outlen, void *out);
+static forensic1394_result send_request(forensic1394_dev *dev,
+                                        int tcode,
+                                        uint64_t addr,
+                                        size_t inlen, void *in,
+                                        size_t outlen, void *out);
 
 platform_bus *platform_bus_alloc(void)
 {
@@ -105,8 +106,8 @@ void platform_bus_destory(forensic1394_bus *bus)
     free(bus->pbus);
 }
 
-int platform_enable_sbp2(forensic1394_bus *bus, const uint32_t *sbp2dir,
-                         size_t len)
+forensic1394_result platform_enable_sbp2(forensic1394_bus *bus,
+                                         const uint32_t *sbp2dir, size_t len)
 {
     int i;
     glob_t globdev;
@@ -133,7 +134,7 @@ int platform_enable_sbp2(forensic1394_bus *bus, const uint32_t *sbp2dir,
         get_info.version = FW_CDEV_VERSION;
         get_info.bus_reset = PTR_TO_U64(&reset);
 
-        // Send the request
+        // Send the request (really should not fail)
         if (ioctl(fd, FW_CDEV_IOC_GET_INFO, &get_info) == -1)
         {
             perror("Get info ioctl");
@@ -150,7 +151,7 @@ int platform_enable_sbp2(forensic1394_bus *bus, const uint32_t *sbp2dir,
 
             if (ioctl(fd, FW_CDEV_IOC_ADD_DESCRIPTOR, &add_desc) == -1)
             {
-                perror("Add descriptor ioctl");
+                return FORENSIC1394_RESULT_IO_ERROR;
             }
 
             // We're done, save the fd and break (ensuring not to close the fd)
@@ -165,7 +166,14 @@ int platform_enable_sbp2(forensic1394_bus *bus, const uint32_t *sbp2dir,
     globfree(&globdev);
 
     // Successful if we have a valid fd
-    return bus->pbus->sbp2_fd == -1;
+    if (bus->pbus->sbp2_fd != -1)
+    {
+        return FORENSIC1394_RESULT_SUCCESS;
+    }
+    else
+    {
+        return FORENSIC1394_RESULT_IO_ERROR;
+    }
 }
 
 void platform_update_device_list(forensic1394_bus *bus)
@@ -240,16 +248,23 @@ void platform_device_destroy(forensic1394_dev *dev)
     free(dev->pdev);
 }
 
-int platform_open_device(forensic1394_dev *dev)
+forensic1394_result platform_open_device(forensic1394_dev *dev)
 {
     dev->pdev->fd = open(dev->pdev->path, O_RDWR);
 
     if (dev->pdev->fd == -1)
     {
-        perror("Open device");
+        /*
+         * Return a general I/O error here as it is unlikely to be permission
+         * related on account of the device previously being opened in a similar
+         * way during the scanning process.
+         */
+        return FORENSIC1394_RESULT_IO_ERROR;
     }
-
-    return dev->pdev->fd != -1;
+    else
+    {
+        return FORENSIC1394_RESULT_SUCCESS;
+    }
 }
 
 void platform_close_device(forensic1394_dev *dev)
@@ -257,10 +272,10 @@ void platform_close_device(forensic1394_dev *dev)
     close(dev->pdev->fd);
 }
 
-int platform_read_device(forensic1394_dev *dev,
-                         uint64_t addr,
-                         uint64_t len,
-                         void *buf)
+forensic1394_result platform_read_device(forensic1394_dev *dev,
+                                         uint64_t addr,
+                                         uint64_t len,
+                                         void *buf)
 {
     int tcode = (len == 4) ? TCODE_READ_QUADLET_REQUEST
                            : TCODE_READ_BLOCK_REQUEST;
@@ -268,10 +283,10 @@ int platform_read_device(forensic1394_dev *dev,
     return send_request(dev, tcode, addr, 0, NULL, len, buf);
 }
 
-int platform_write_device(forensic1394_dev *dev,
-                          uint64_t addr,
-                          size_t len,
-                          void *buf)
+forensic1394_result platform_write_device(forensic1394_dev *dev,
+                                          uint64_t addr,
+                                          size_t len,
+                                          void *buf)
 {
     int tcode = (len == 4) ? TCODE_WRITE_QUADLET_REQUEST
                            : TCODE_WRITE_BLOCK_REQUEST;
@@ -343,17 +358,17 @@ void read_fw_sysfs_prop(const char* devpath, const char* prop,
     snprintf(sysfspath, sizeof(sysfspath), "/sys/bus/firewire/devices/%s/%s",
              devpath + 5, prop);
 
+    // Zero the contents (ensures termination no matter what)
+    memset(contents, '\0', maxb);
+
     // Open the file for reading
     fd = open(sysfspath, O_RDONLY);
 
+    // Unable to open the property; usually because it does not exist
     if (fd == -1)
     {
-        perror("Open sysfs property");
         return;
     }
-
-    // Zero the contents (ensures termination no matter what)
-    memset(contents, '\0', maxb);
 
     // Read the contents
     actualb = read(fd, contents, maxb);
@@ -368,15 +383,14 @@ void read_fw_sysfs_prop(const char* devpath, const char* prop,
     close(fd);
 }
 
-int send_request(forensic1394_dev *dev,
-                 int tcode,
-                 uint64_t addr,
-                 size_t inlen, void *in,
-                 size_t outlen, void *out)
+forensic1394_result send_request(forensic1394_dev *dev,
+                                 int tcode,
+                                 uint64_t addr,
+                                 size_t inlen, void *in,
+                                 size_t outlen, void *out)
 {
     struct fw_cdev_send_request request = {};
     size_t response_len;
-    int done = 0;
 
     // Fill out the request structure
     request.tcode       = tcode;
@@ -390,12 +404,13 @@ int send_request(forensic1394_dev *dev,
     // Make the request
     if (ioctl(dev->pdev->fd, FW_CDEV_IOC_SEND_REQUEST, &request) == -1)
     {
-        perror("Send request");
-        return 0;
+        // EIO errors are usually because of bad request sizes
+        return (errno == EIO) ? FORENSIC1394_RESULT_IO_SIZE
+                              : FORENSIC1394_RESULT_IO_ERROR;
     }
 
     // Keep going until we get a response
-    while (!done)
+    while (1)
     {
         char buffer[16 * 1024];
         union fw_cdev_event *event = (void *) buffer;
@@ -405,26 +420,35 @@ int send_request(forensic1394_dev *dev,
 
         if (response_len != -1) switch (event->common.type)
         {
-            // We have a response to our request for data, copy it
+            // We have a response to our request (input or output)
             case FW_CDEV_EVENT_RESPONSE:
             {
+                // If we are expecting some output
                 if (out)
                 {
-                    memcpy(out, event->response.data, outlen);
+                    // Ensure that we got what we requested
+                    if (response_len == (sizeof(struct fw_cdev_event_response)) + outlen)
+                    {
+                        memcpy(out, event->response.data, outlen);
+                    }
+                    // Otherwise we've got an I/O error
+                    else
+                    {
+                        return FORENSIC1394_RESULT_IO_ERROR;
+                    }
                 }
 
-                done = 1;
+                // Not expecting output, or got output, either way, success
+                return FORENSIC1394_RESULT_SUCCESS;
                 break;
             }
             default:
                 break;
         }
+        // Problem reading the response back from the device
         else
         {
-            perror("Read event");
-            return 0;
+            return FORENSIC1394_RESULT_IO_ERROR;
         }
     }
-
-    return 1;
 }

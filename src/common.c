@@ -56,6 +56,17 @@ static const uint32_t sbp2_unit_dir[] =
     0x17000021      // Model
 };
 
+static const char *result_str[] =
+{
+    "Success",
+    "General error",
+    "Bus reset has occurred",
+    "Insufficient permisisons",
+    "Device is busy",
+    "General I/O error",
+    "Bad I/O request size"
+};
+
 static void forensic1394_destroy_all_devices(forensic1394_bus *bus);
 
 forensic1394_bus *forensic1394_alloc(void)
@@ -101,8 +112,10 @@ void forensic1394_destroy(forensic1394_bus *bus)
     free(bus);
 }
 
-int forensic1394_enable_sbp2(forensic1394_bus *bus)
+forensic1394_result forensic1394_enable_sbp2(forensic1394_bus *bus)
 {
+    forensic1394_result ret;
+
     assert(bus);
 
     // Check that it is not already enabled
@@ -111,10 +124,16 @@ int forensic1394_enable_sbp2(forensic1394_bus *bus)
         return 1;
     }
 
-    bus->sbp2Enabled = platform_enable_sbp2(bus, sbp2_unit_dir,
-                                            ARRAY_E(sbp2_unit_dir));
+    ret = platform_enable_sbp2(bus, sbp2_unit_dir,
+                               ARRAY_E(sbp2_unit_dir));
 
-    return bus->sbp2Enabled;
+    // If successful mark SBP-2 as being enabled
+    if (ret == FORENSIC1394_RESULT_SUCCESS)
+    {
+        bus->sbp2Enabled = 1;
+    }
+
+    return ret;
 }
 
 forensic1394_dev **forensic1394_get_devices(forensic1394_bus *bus,
@@ -147,23 +166,23 @@ forensic1394_dev **forensic1394_get_devices(forensic1394_bus *bus,
     return bus->dev;
 }
 
-int forensic1394_open_device(forensic1394_dev *dev)
+forensic1394_result forensic1394_open_device(forensic1394_dev *dev)
 {
-    int ret;
+    forensic1394_result ret;
 
     assert(dev);
 
     // Ensure the device is not already open
     if (forensic1394_device_is_open(dev))
     {
-        return 0;
+        return FORENSIC1394_RESULT_SUCCESS;
     }
 
     // Try to open the device
     ret = platform_open_device(dev);
 
     // If successful mark the device as open
-    if (ret)
+    if (ret == FORENSIC1394_RESULT_SUCCESS)
     {
         dev->isOpen = 1;
     }
@@ -187,10 +206,10 @@ void forensic1394_close_device(forensic1394_dev *dev)
     dev->isOpen = 0;
 }
 
-int forensic1394_read_device(forensic1394_dev *dev,
-                             uint64_t addr,
-                             size_t len,
-                             void *buf)
+forensic1394_result forensic1394_read_device(forensic1394_dev *dev,
+                                             uint64_t addr,
+                                             size_t len,
+                                             void *buf)
 {
     assert(dev);
 
@@ -200,10 +219,10 @@ int forensic1394_read_device(forensic1394_dev *dev,
     return platform_read_device(dev, addr, len, buf);
 }
 
-int forensic1394_write_device(forensic1394_dev *dev,
-                              uint64_t addr,
-                              size_t len,
-                              void *buf)
+forensic1394_result forensic1394_write_device(forensic1394_dev *dev,
+                                              uint64_t addr,
+                                              size_t len,
+                                              void *buf)
 {
     assert(dev);
 
@@ -290,4 +309,18 @@ void forensic1394_destroy_all_devices(forensic1394_bus *bus)
     bus->dev = NULL;
     bus->ndev = 0;
     bus->size = 0;
+}
+
+const char *forensic1394_get_result_str(forensic1394_result r)
+{
+    // Check the result is valid
+    if (r <= 0 &&  r > FORENSIC1394_RESULT_END)
+    {
+        return result_str[abs(r)];
+    }
+    // Invalid
+    else
+    {
+        return NULL;
+    }
 }

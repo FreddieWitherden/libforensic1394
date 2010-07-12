@@ -80,6 +80,38 @@ typedef struct _forensic1394_bus forensic1394_bus;
 typedef struct _forensic1394_dev forensic1394_dev;
 
 /**
+ * \brief Possible return status codes.
+ *
+ * The possible return codes for a forensic1394 function.  In general methods
+ * return 0 on success and a negative integer on failure.  These codes may be
+ * used to ascertain precisely why a method failed.
+ *
+ * It is worth noting that invalid input parameters are handled with assertions
+ * as opposed to status codes.
+ *
+ * \sa forensic1394_get_result_str
+ */
+typedef enum
+{
+    /// No errors encountered
+    FORENSIC1394_RESULT_SUCCESS     = 0,
+    /// General, unspecified, error
+    FORENSIC1394_RESULT_OTHER_ERROR = -1,
+    /// A bus reset has occured
+    FORENSIC1394_RESULT_BUS_RESET   = -2,
+    /// Permissions related error
+    FORENSIC1394_RESULT_NO_PERM     = -3,
+    /// Device is busy
+    FORENSIC1394_RESULT_BUSY        = -4,
+    /// General I/O error
+    FORENSIC1394_RESULT_IO_ERROR    = -5,
+    /// Bad transfer size (normally too large)
+    FORENSIC1394_RESULT_IO_SIZE     = -6,
+    /// Sentinel; internal use only
+    FORENSIC1394_RESULT_END         = -7
+} forensic1394_result;
+
+/**
  * Allocates and initialises a new handle to the systems firewire
  * bus. This bus can then be used to query the devices attached to the
  * bus and to update the configuration status ROM (`CSR') of the bus.
@@ -102,7 +134,7 @@ forensic1394_alloc(void);
  *
  * @param bus The 1394 bus to add the SBP-2 unit directory to.
  */
-FORENSIC1394_DECL int
+FORENSIC1394_DECL forensic1394_result
 forensic1394_enable_sbp2(forensic1394_bus *bus);
 
 /**
@@ -134,7 +166,7 @@ forensic1394_destroy(forensic1394_bus *bus);
  * @param dev The device to open.
  * @return True if the device was successfully opened; false otherwise.
  */
-FORENSIC1394_DECL int
+FORENSIC1394_DECL forensic1394_result
 forensic1394_open_device(forensic1394_dev *dev);
 
 /**
@@ -151,7 +183,7 @@ forensic1394_close_device(forensic1394_dev *dev);
  * @param dev The firewire device.
  * @return True if the device is open; false otherwise.
  */
-FORENSIC1394_DECL int
+FORENSIC1394_DECL forensic1394_result
 forensic1394_device_is_open(forensic1394_dev *dev);
 
 /**
@@ -169,13 +201,13 @@ forensic1394_device_is_open(forensic1394_dev *dev);
  *            size.
  * @return ...
  */
-FORENSIC1394_DECL int
+FORENSIC1394_DECL forensic1394_result
 forensic1394_read_device(forensic1394_dev *dev,
                          uint64_t addr,
                          size_t len,
                          void *buf);
 
-FORENSIC1394_DECL int
+FORENSIC1394_DECL forensic1394_result
 forensic1394_write_device(forensic1394_dev *dev,
                           uint64_t addr,
                           size_t len,
@@ -206,5 +238,19 @@ forensic1394_get_device_vendor_name(forensic1394_dev *dev);
 
 FORENSIC1394_DECL int
 forensic1394_get_device_vendor_id(forensic1394_dev *dev);
+
+/**
+ * \brief Converts a return status code to a string.
+ *
+ * Returns a textual representation of the return status code \a result.  The
+ * string returned is guarenteed to be valid for the lifetime of the program.
+ *
+ * In the event of an invalid code NULL is returned.
+ *
+ *   \param r The return status code.
+ *  \return A description of the error code on success; NULL otherwise.
+ */
+FORENSIC1394_DECL const char *
+forensic1394_get_result_str(forensic1394_result r);
 
 #endif // _FORENSIC_1394_H

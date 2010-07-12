@@ -62,25 +62,25 @@ platform_bus *platform_bus_alloc(void);
 
 void platform_bus_destory(forensic1394_bus *bus);
 
-int platform_enable_sbp2(forensic1394_bus *bus, const uint32_t *sbp2dir,
-                         size_t len);
+forensic1394_result platform_enable_sbp2(forensic1394_bus *bus,
+                                         const uint32_t *sbp2dir, size_t len);
 
 void platform_update_device_list(forensic1394_bus *bus);
 
 void platform_device_destroy(forensic1394_dev *dev);
 
-int platform_open_device(forensic1394_dev *dev);
+forensic1394_result platform_open_device(forensic1394_dev *dev);
 
 void platform_close_device(forensic1394_dev *dev);
 
-int platform_read_device(forensic1394_dev *dev,
-                         uint64_t addr,
-                         size_t len,
-                         void *buf);
+forensic1394_result platform_read_device(forensic1394_dev *dev,
+                                         uint64_t addr,
+                                         size_t len,
+                                         void *buf);
 
-int platform_write_device(forensic1394_dev *dev,
-                          uint64_t addr,
-                          size_t len,
-                          void *buf);
+forensic1394_result platform_write_device(forensic1394_dev *dev,
+                                          uint64_t addr,
+                                          size_t len,
+                                          void *buf);
 
 #endif // FORENSIC1394_COMMON_H
