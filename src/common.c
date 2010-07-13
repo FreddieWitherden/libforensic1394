@@ -86,6 +86,9 @@ forensic1394_bus *forensic1394_alloc(void)
     b->ndev = 0;
     b->size = 0;
 
+    // No ondestroy callback
+    b->ondestroy = NULL;
+
     // Delegate to the platform-specific allocation routine
     b->pbus = platform_bus_alloc();
 
@@ -110,6 +113,20 @@ void forensic1394_destroy(forensic1394_bus *bus)
 
     // Free the bus
     free(bus);
+}
+
+void *forensic1394_get_bus_user_data(forensic1394_bus *bus)
+{
+    assert(bus);
+
+    return bus->user_data;
+}
+
+void forensic1394_set_bus_user_data(forensic1394_bus *bus, void *u)
+{
+    assert(bus);
+
+    bus->user_data = u;
 }
 
 forensic1394_result forensic1394_enable_sbp2(forensic1394_bus *bus)
@@ -137,7 +154,8 @@ forensic1394_result forensic1394_enable_sbp2(forensic1394_bus *bus)
 }
 
 forensic1394_dev **forensic1394_get_devices(forensic1394_bus *bus,
-                                            int *ndev)
+                                            int *ndev,
+                                            forensic1394_device_callback ondestroy)
 {
     assert(bus);
 
@@ -162,6 +180,9 @@ forensic1394_dev **forensic1394_get_devices(forensic1394_bus *bus,
     {
         *ndev = bus->ndev;
     }
+
+    // Save the ondestroy callback for later (may be NULL)
+    bus->ondestroy = ondestroy;
 
     return bus->dev;
 }
@@ -204,6 +225,20 @@ void forensic1394_close_device(forensic1394_dev *dev)
 
     // The device is now closed
     dev->isOpen = 0;
+}
+
+void *forensic1394_get_device_user_data(forensic1394_dev *dev)
+{
+    assert(dev);
+
+    return dev->user_data;
+}
+
+void forensic1394_set_device_user_data(forensic1394_dev *dev, void *u)
+{
+    assert(dev);
+
+    dev->user_data = u;
 }
 
 forensic1394_result forensic1394_read_device(forensic1394_dev *dev,
@@ -294,6 +329,12 @@ void forensic1394_destroy_all_devices(forensic1394_bus *bus)
         if (forensic1394_device_is_open(bus->dev[i]))
         {
             forensic1394_close_device(bus->dev[i]);
+        }
+
+        // If a device-destroy callback is set; call it
+        if (bus->ondestroy)
+        {
+            bus->ondestroy(bus, bus->dev[i]);
         }
 
         // Next call the platform specific destruction routine

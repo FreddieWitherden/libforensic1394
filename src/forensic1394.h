@@ -45,7 +45,7 @@
  *
  * forensic1394_enable_sbp2(bus);
  *
- * dev = forensic1394_get_devices(bus, NULL); assert(dev);
+ * dev = forensic1394_get_devices(bus, NULL, NULL); assert(dev);
  *
  * forensic1394_open_device(dev[0]);
  *
@@ -94,6 +94,26 @@
 typedef struct _forensic1394_bus forensic1394_bus;
 
 typedef struct _forensic1394_dev forensic1394_dev;
+
+/**
+ * A function to be called when a \c forensic1394_dev is about to be destroyed.
+ *  This should be passed to \c forensic1394_get_devices and will be associated
+ *  with all devices returned by the method.  The callback will fire either when
+ *  the bus is destroyed via \c forensic1394_destroy or the next time that
+ *  \c forensic1394_get_devices is called (which has the implicit effect of
+ *  destroying all existing devices first).
+ *
+ * If user data is required it can be attached on either a per-bus or per-device
+ *  level.
+ *
+ *   \param bus The bus owning the device.
+ *   \param dev The device being destroyed.
+ *
+ * \sa forensic1394_bus_set_user_data
+ * \sa forensic1394_device_set_user_data
+ */
+typedef void (*forensic1394_device_callback) (forensic1394_bus *bus,
+                                              forensic1394_dev *dev);
 
 /**
  * \brief Possible return status codes.
@@ -154,14 +174,33 @@ FORENSIC1394_DECL forensic1394_result
 forensic1394_enable_sbp2(forensic1394_bus *bus);
 
 /**
- * Gets the list of (foreign) devices attached to the firewire bus.
+ * \brief Gets the devices attached to the firewire bus.
  *
- * The list of devices returned by this method is NULL terminated, making it
- *  possible to iterate over the list with a while loop.
+ * This method scans the (foreign) devices attached to \a bus and returns a
+ *  NULL-terminated list of them.  \a ndev, if not NULL, will be set to the
+ *  total number of devices.
+ *
+ * Getting the attached devices is a destructive process; voiding any existing
+ *  device handles.  To compensate for this the \a ondestroy callback is
+ *  provided.  This argument, if not NULL, will be called when the new device
+ *  list is destroyed, usually as a result of a subsequent call to
+ *  \c forensic1394_get_devices or a call to \c forensic1394_destroy.  The
+ *  function is called for each device in the list.
+ *
+ * \warning Calling this method will invalidate all active device handles.
+ *
+ *   \param bus The bus to get the devices for.
+ *   \param[out] ndev The number of devices found; NULL is acceptable.
+ *   \param[in] ondestroy Function to be called when the returned device list is
+ *                         destroyed; NULL for no callback.
+ *  \return A NULL-terminated list of devices.
+ *
+ * \sa forensic1394_device_callback
  */
 FORENSIC1394_DECL forensic1394_dev **
 forensic1394_get_devices(forensic1394_bus *bus,
-                         int *ndev);
+                         int *ndev,
+                         forensic1394_device_callback ondestroy);
 
 /**
  * Destroys a bus handle, releasing all of the memory associated with
@@ -174,6 +213,29 @@ forensic1394_get_devices(forensic1394_bus *bus,
  */
 FORENSIC1394_DECL void
 forensic1394_destroy(forensic1394_bus *bus);
+
+/**
+ * Returns the user data for \a bus.  If \c forensic1394_set_bus_user_data is
+ *  yet to be called on the bus the result is undefined.
+ *
+ *   \param bus The bus.
+ *  \return The user data associated with the bus.
+ *
+ * \sa forensic1394_set_bus_user_data
+ */
+FORENSIC1394_DECL void *
+forensic1394_get_bus_user_data(forensic1394_bus *bus);
+
+/**
+ * Sets the user data for \a bus to \a u.
+ *
+ *   \param bus The bus.
+ *   \param[in] u The user data to set.
+ *
+ * \sa forensic1394_get_bus_user_data
+ */
+FORENSIC1394_DECL void
+forensic1394_set_bus_user_data(forensic1394_bus *bus, void *u);
 
 /**
  * Attempts to open up the firewire device dev.  It is necessary to open a
@@ -254,6 +316,29 @@ forensic1394_get_device_vendor_name(forensic1394_dev *dev);
 
 FORENSIC1394_DECL int
 forensic1394_get_device_vendor_id(forensic1394_dev *dev);
+
+/**
+* Returns the user data for \a dev.  If \c forensic1394_set_device_user_data is
+*  yet to be called on the device the result is undefined.
+*
+*   \param dev The device.
+*  \return The user data associated with the device.
+*
+* \sa forensic1394_set_device_user_data
+*/
+FORENSIC1394_DECL void *
+forensic1394_get_device_user_data(forensic1394_dev *dev);
+
+/**
+* Sets the user data for \a device to \a u.
+*
+*   \param dev The device.
+*   \param[in] u The user data to set.
+*
+* \sa forensic1394_get_device_user_data
+*/
+FORENSIC1394_DECL void
+forensic1394_set_device_user_data(forensic1394_dev *dev, void *u);
 
 /**
  * \brief Converts a return status code to a string.

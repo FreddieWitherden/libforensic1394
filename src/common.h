@@ -37,6 +37,10 @@ struct _forensic1394_bus
     int ndev;
     int size;
 
+    void *user_data;
+
+    forensic1394_device_callback ondestroy;
+
     platform_bus *pbus;
 };
 
@@ -54,6 +58,8 @@ struct _forensic1394_dev
     uint32_t generation;
 
     uint32_t rom[256];
+
+    void *user_data;
 
     platform_dev *pdev;
     forensic1394_bus *bus;
