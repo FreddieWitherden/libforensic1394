@@ -247,6 +247,7 @@ forensic1394_result forensic1394_read_device(forensic1394_dev *dev,
                                              void *buf)
 {
     assert(dev);
+    assert(dev->isOpen);
 
     // Mask the top 16-bits of the address
     addr &= 0x0000ffffffffffffULL;
@@ -260,6 +261,7 @@ forensic1394_result forensic1394_write_device(forensic1394_dev *dev,
                                               void *buf)
 {
     assert(dev);
+    assert(dev->isOpen);
 
     // Mask the top 16-bits of the address
     addr &= 0x0000ffffffffffffULL;
