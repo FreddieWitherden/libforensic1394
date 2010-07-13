@@ -57,7 +57,6 @@ struct _platform_dev
 {
     char path[64];
     int fd;
-    int generation;
 };
 
 static forensic1394_dev *alloc_dev(const char *devpath,
@@ -319,8 +318,8 @@ forensic1394_dev *alloc_dev(const char *devpath,
     memcpy(dev->rom, rom, sizeof(dev->rom));
 
     // Same with the node ID and generation
-    dev->nodeid = reset->node_id;
-    dev->pdev->generation = reset->generation;
+    dev->nodeid     = reset->node_id;
+    dev->generation = reset->generation;
 
     // Product name
     read_fw_sysfs_prop(devpath, "model_name",
@@ -398,7 +397,7 @@ forensic1394_result send_request(forensic1394_dev *dev,
     request.offset      = addr;
     request.data        = PTR_TO_U64(in);
     request.closure     = 0;
-    request.generation  = dev->pdev->generation;
+    request.generation  = dev->generation;
 
     // Make the request
     if (ioctl(dev->pdev->fd, FW_CDEV_IOC_SEND_REQUEST, &request) == -1)

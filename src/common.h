@@ -51,6 +51,7 @@ struct _forensic1394_dev
     int isOpen;
 
     uint16_t nodeid;
+    uint32_t generation;
 
     uint32_t rom[256];
 

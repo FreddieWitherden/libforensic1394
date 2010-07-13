@@ -75,8 +75,6 @@ struct _platform_dev
 {
     IOFireWireLibDeviceRef devIntrf;
     io_object_t dev;
-
-    UInt32 generation;
 };
 
 /**
@@ -294,11 +292,11 @@ void platform_update_device_list(forensic1394_bus *bus)
 
         // Get the bus generation
         (*fdev->pdev->devIntrf)->GetBusGeneration(fdev->pdev->devIntrf,
-                                                  &fdev->pdev->generation);
+                                                  &fdev->generation);
 
         // Get the node ID
         (*fdev->pdev->devIntrf)->GetRemoteNodeID(fdev->pdev->devIntrf,
-                                                 fdev->pdev->generation,
+                                                 fdev->generation,
                                                  &fdev->nodeid);
 
         // See if we need to extend the device list; +1 as the last device
