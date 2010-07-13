@@ -23,6 +23,48 @@
 #include <IOKit/IOKitLib.h>
 #include <IOKit/firewire/IOFireWireLib.h>
 
+/**
+ * Requires that the \c IOReturn \a ret be equal to \c kIOReturnSuccess.
+ *  Otherwise the \c forensic1394_result variable \a fret is set to the
+ *  appropriate error code and a \c goto jump to \a label is made.
+ *
+ *  \param ret The return value to check.
+ *  \param label The label to jump to if the check fails.
+ *  \param fret The variable to place the corresponding forensic1394 error in.
+ *
+ * \sa require_assertion
+ */
+#define require_success(ret, label, fret) \
+do                                        \
+{                                         \
+    if (ret != kIOReturnSuccess)          \
+    {                                     \
+        fret = convert_ioreturn(ret);     \
+        goto label;                       \
+    }                                     \
+} while (0);
+
+/**
+ * Requires the assertion \a assertion be true.  Otherwise \a fret is set to
+ * \a fretcode and a jump to \a label is made.
+ *
+ *   \param assertion The expression to check.
+ *   \param label The label to jump to if the assertion is false.
+ *   \param fret The local variable to copy \a fretcode into.
+ *   \param fretcode The forensic1394 return code.
+ *
+ * \sa require_success
+ */
+#define require_assertion(assertion, label, fret, fretcode) \
+do                                                          \
+{                                                           \
+    if (!(assertion))                                       \
+    {                                                       \
+        fret = fretcode;                                    \
+        goto label;                                         \
+    }                                                       \
+} while (0);
+
 struct _platform_bus
 {
     IOFireWireLibDeviceRef localDev;
@@ -36,6 +78,14 @@ struct _platform_dev
 
     UInt32 generation;
 };
+
+/**
+ * \brief Converts \a i into the closest matching \c forensic1394_result.
+ *
+ *   \param i The return value to convert.
+ *  \return The corresponding \c forensic1394_result.
+ */
+static forensic1394_result convert_ioreturn(IOReturn i);
 
 static void copy_device_property_string(io_registry_entry_t dev,
                                         CFStringRef prop,
@@ -80,8 +130,8 @@ void platform_bus_destory(forensic1394_bus *bus)
     free(bus->pbus);
 }
 
-int platform_enable_sbp2(forensic1394_bus *bus, const uint32_t *sbp2dir,
-                         size_t len)
+forensic1394_result platform_enable_sbp2(forensic1394_bus *bus,
+                                         const uint32_t *sbp2dir, size_t len)
 {
     int i;
 
@@ -96,40 +146,40 @@ int platform_enable_sbp2(forensic1394_bus *bus, const uint32_t *sbp2dir,
     IOFireWireLibDeviceRef localDev;
     IOFireWireLibLocalUnitDirectoryRef localUnitDir;
 
-    IOReturn ret;
+    IOReturn iret;
+    forensic1394_result fret = FORENSIC1394_RESULT_SUCCESS;
 
     // We need to get the systems local device node to update the CSR
     matchingDict = IOServiceMatching("IOFireWireLocalNode");
-    ret = IOServiceGetMatchingServices(kIOMasterPortDefault,
-                                       matchingDict,
-                                       &iterator);
+    iret = IOServiceGetMatchingServices(kIOMasterPortDefault,
+                                        matchingDict,
+                                        &iterator);
+
+    // If the call fails then we do not need to release the iterator
+    require_success(iret, cleanupNull, fret);
 
     // There should only be one of these; so grab the first
     currdev = IOIteratorNext(iterator);
 
-    // Release the iterator
-    IOObjectRelease(iterator);
-
     // Get a plug-in interface to the device
-    ret = IOCreatePlugInInterfaceForService(currdev,
-                                            kIOFireWireLibTypeID,
-                                            kIOCFPlugInInterfaceID,
-                                            &plugIn,
-                                            &theScore);
+    IOCreatePlugInInterfaceForService(currdev,
+                                      kIOFireWireLibTypeID,
+                                      kIOCFPlugInInterfaceID,
+                                      &plugIn,
+                                      &theScore);
 
-    // Release the device's io_object
-    IOObjectRelease(currdev);
+    // Ensure plugIn is != NULL; otherwise this is a general error
+    require_assertion(plugIn, cleanupCurrdev, fret, FORENSIC1394_RESULT_OTHER_ERROR);
 
     // Use this plug-in to get a firewire device interface
-    ret = (*plugIn)->QueryInterface(plugIn,
-                                    CFUUIDGetUUIDBytes(kIOFireWireDeviceInterfaceID_v9),
-                                    (void **) &localDev);
+    iret = (*plugIn)->QueryInterface(plugIn,
+                                     CFUUIDGetUUIDBytes(kIOFireWireDeviceInterfaceID_v9),
+                                     (void **) &localDev);
 
-    // Release the plug-in interface
-    IODestroyPlugInInterface(plugIn);
+    require_success(iret, cleanupPlugIn, fret);
 
     // Use this device interface to open up the device
-    ret = (*localDev)->Open(localDev);
+    (*localDev)->Open(localDev);
 
     // And grab a unit local directory interface
     localUnitDir = (*localDev)->CreateLocalUnitDirectory(localDev,
@@ -154,7 +204,20 @@ int platform_enable_sbp2(forensic1394_bus *bus, const uint32_t *sbp2dir,
     bus->pbus->localDev     = localDev;
     bus->pbus->localUnitDir = localUnitDir;
 
-    return 1;
+cleanupPlugIn:
+    // Release the plug-in interface
+    IODestroyPlugInInterface(plugIn);
+
+cleanupCurrdev:
+    // Release the current device io_object
+    IOObjectRelease(currdev);
+
+    // Release the iterator used to find the device
+    IOObjectRelease(iterator);
+
+cleanupNull:
+    // Should be FORENSIC1394_RESULT_SUCCESS unless changed by an error macro
+    return fret;
 }
 
 void platform_update_device_list(forensic1394_bus *bus)
@@ -164,13 +227,14 @@ void platform_update_device_list(forensic1394_bus *bus)
     io_iterator_t iterator;
     io_object_t currdev;
 
-    IOReturn ret;
+    IOReturn iret;
+    forensic1394_result fret;   // Used but never returned
 
     // We need to get the systems local device node to update the CSR
     matchingDict = IOServiceMatching("IOFireWireDevice");
-    ret = IOServiceGetMatchingServices(kIOMasterPortDefault,
-                                       matchingDict,
-                                       &iterator);
+    iret = IOServiceGetMatchingServices(kIOMasterPortDefault,
+                                        matchingDict,
+                                        &iterator);
 
     while ((currdev = IOIteratorNext(iterator)))
     {
@@ -187,21 +251,23 @@ void platform_update_device_list(forensic1394_bus *bus)
         fdev->pdev->dev = currdev;
 
         // Get an plug-in interface to the device
-        ret = IOCreatePlugInInterfaceForService(currdev,
-                                                kIOFireWireLibTypeID,
-                                                kIOCFPlugInInterfaceID,
-                                                &plugIn, &theScore);
+        IOCreatePlugInInterfaceForService(currdev,
+                                          kIOFireWireLibTypeID,
+                                          kIOCFPlugInInterfaceID,
+                                          &plugIn, &theScore);
+
+        // Ensure we got an interface
+        require_assertion(plugIn, cleanupPlugIn, fret, FORENSIC1394_RESULT_OTHER_ERROR);
 
         // Use this to get an interface to the firewire device
-        ret = (*plugIn)->QueryInterface(plugIn,
-                                        CFUUIDGetUUIDBytes(kIOFireWireDeviceInterfaceID_v9),
-                                        (void **) &fdev->pdev->devIntrf);
+        (*plugIn)->QueryInterface(plugIn,
+                                  CFUUIDGetUUIDBytes(kIOFireWireDeviceInterfaceID_v9),
+                                  (void **) &fdev->pdev->devIntrf);
 
-        // Release the plug-in interface
-        IODestroyPlugInInterface(plugIn);
 
         // Ensure the interface is inited
-        (*fdev->pdev->devIntrf)->InterfaceIsInited(fdev->pdev->devIntrf);
+        require_assertion((*fdev->pdev->devIntrf)->InterfaceIsInited(fdev->pdev->devIntrf),
+                          cleanupDevIntrf, fret, FORENSIC1394_RESULT_OTHER_ERROR);
 
         // Save the bus the device is attached to
         fdev->bus = bus;
@@ -245,6 +311,24 @@ void platform_update_device_list(forensic1394_bus *bus)
 
         // Add this new device to the device list
         bus->dev[bus->ndev++] = fdev;
+
+        // Continue; everything from here on in is damage control
+        continue;
+
+    cleanupDevIntrf:
+        // Release the device interface
+        (*fdev->pdev->devIntrf)->Release(fdev->pdev->devIntrf);
+
+    cleanupPlugIn:
+        // Release the plug-in interface
+        IODestroyPlugInInterface(plugIn);
+
+        // Release the IO object
+        IOObjectRelease(fdev->pdev->dev);
+
+        // Release the partially allocated device
+        free(fdev->pdev);
+        free(fdev);
     }
 
     // Release the iterator
@@ -263,9 +347,14 @@ void platform_device_destroy(forensic1394_dev *dev)
     free(dev->pdev);
 }
 
-int platform_open_device(forensic1394_dev *dev)
+forensic1394_result platform_open_device(forensic1394_dev *dev)
 {
-    return (*dev->pdev->devIntrf)->Open(dev->pdev->devIntrf) == kIOReturnSuccess;
+    IOReturn iret;
+
+    // Attempt to open the device
+    iret = (*dev->pdev->devIntrf)->Open(dev->pdev->devIntrf);
+
+    return convert_ioreturn(iret);
 }
 
 void platform_close_device(forensic1394_dev *dev)
@@ -291,9 +380,8 @@ int platform_read_device(forensic1394_dev *dev,
     ret = (*dev->pdev->devIntrf)->Read(dev->pdev->devIntrf, dev->pdev->dev,
                                        &fwaddr, buf, &bufsize, false, 0);
 
-    printf("%d\n", ret);
 
-    return 1;
+    return convert_ioreturn(ret);
 }
 
 int platform_write_device(forensic1394_dev *dev,
@@ -314,7 +402,26 @@ int platform_write_device(forensic1394_dev *dev,
     ret = (*dev->pdev->devIntrf)->Write(dev->pdev->devIntrf, dev->pdev->dev,
                                         &fwaddr, buf, &bufsize, false, 0);
 
-    return 1;
+    return convert_ioreturn(ret);
+}
+
+forensic1394_result convert_ioreturn(IOReturn i)
+{
+    switch (i)
+    {
+        case kIOReturnSuccess:
+            return FORENSIC1394_RESULT_SUCCESS;
+            break;
+        case kIOReturnBusy:
+            return FORENSIC1394_RESULT_BUSY;
+            break;
+        case kIOFireWireBusReset:
+            return FORENSIC1394_RESULT_BUS_RESET;
+            break;
+        default:
+            return FORENSIC1394_RESULT_IO_ERROR;
+            break;
+    }
 }
 
 void copy_device_property_string(io_registry_entry_t dev,
@@ -324,6 +431,9 @@ void copy_device_property_string(io_registry_entry_t dev,
 {
     // Attempt to extract the property as a CFString
     CFStringRef propstr = IORegistryEntryCreateCFProperty(dev, prop, NULL, 0);
+
+    // Clear the property first
+    memset(buf, 0, bufsiz);
 
     // Ensure that the property exists
     if (propstr)
@@ -337,7 +447,7 @@ void copy_device_property_string(io_registry_entry_t dev,
         // Invalid property type
         else
         {
-
+            return;
         }
 
 
@@ -347,7 +457,7 @@ void copy_device_property_string(io_registry_entry_t dev,
     // Property not found
     else
     {
-        memset(buf, 0, bufsiz);
+        return;
     }
 }
 
@@ -357,6 +467,8 @@ void copy_device_property_int(io_registry_entry_t dev,
 {
     // Attempt to extract the property as a CFNumber
     CFNumberRef propnum = IORegistryEntryCreateCFProperty(dev, prop, NULL, 0);
+
+    *num = 0;
 
     // Ensure that the property exists
     if (propnum)
@@ -370,9 +482,8 @@ void copy_device_property_int(io_registry_entry_t dev,
         // Invalid property type
         else
         {
-
+            return;
         }
-
 
         // Release the number
         CFRelease(propnum);
@@ -380,7 +491,7 @@ void copy_device_property_int(io_registry_entry_t dev,
     // Property not found
     else
     {
-        *num = -1;
+        return;
     }
 }
 
