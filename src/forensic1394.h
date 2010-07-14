@@ -298,8 +298,8 @@ forensic1394_is_device_open(forensic1394_dev *dev);
  *   \param dev The device to read from.
  *   \param addr The memory address to start reading from.
  *   \param len The number of bytes to read.
- *   \param buf The buffer to copy the read bytes into, must be at least len in
- *              size.
+ *   \param[out] buf The buffer to copy the read bytes into; must be at least
+ *                   \a len bytes in size.
  *  \return A result status code.
  */
 FORENSIC1394_DECL forensic1394_result
@@ -319,7 +319,7 @@ forensic1394_read_device(forensic1394_dev *dev,
  *   \param dev The device to write to.
  *   \param addr The memory address to start writing to.
  *   \param len The number of bytes to write.
- *   \param buf The buffer to write.
+ *   \param[in] buf The buffer to write.
  *  \return A result status code.
  */
 FORENSIC1394_DECL forensic1394_result
