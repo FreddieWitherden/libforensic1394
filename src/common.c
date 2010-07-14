@@ -194,7 +194,7 @@ forensic1394_result forensic1394_open_device(forensic1394_dev *dev)
     assert(dev);
 
     // Ensure the device is not already open
-    if (forensic1394_device_is_open(dev))
+    if (forensic1394_is_device_open(dev))
     {
         return FORENSIC1394_RESULT_SUCCESS;
     }
@@ -216,7 +216,7 @@ void forensic1394_close_device(forensic1394_dev *dev)
     assert(dev);
 
     // Ensure the device is open
-    if (!forensic1394_device_is_open(dev))
+    if (!forensic1394_is_device_open(dev))
     {
         return;
     }
@@ -284,7 +284,7 @@ uint16_t forensic1394_get_device_nodeid(forensic1394_dev *dev)
     return dev->nodeid;
 }
 
-int forensic1394_device_is_open(forensic1394_dev *dev)
+int forensic1394_is_device_open(forensic1394_dev *dev)
 {
     assert(dev);
 
@@ -328,7 +328,7 @@ void forensic1394_destroy_all_devices(forensic1394_bus *bus)
     for (i = 0; i < bus->ndev; i++)
     {
         // First, close the device if it is open
-        if (forensic1394_device_is_open(bus->dev[i]))
+        if (forensic1394_is_device_open(bus->dev[i]))
         {
             forensic1394_close_device(bus->dev[i]);
         }

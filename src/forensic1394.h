@@ -277,10 +277,10 @@ forensic1394_close_device(forensic1394_dev *dev);
  * Determines if the firewire device dev is open or not.
  *
  *   \param dev The firewire device.
- *  \return A result status code.
+ *  \return Non-zero if the device is open; 0 if it is closed.
  */
-FORENSIC1394_DECL forensic1394_result
-forensic1394_device_is_open(forensic1394_dev *dev);
+FORENSIC1394_DECL int
+forensic1394_is_device_open(forensic1394_dev *dev);
 
 /**
  * \brief Reads \a len bytes from \a dev starting at \a addr into \a buf.
