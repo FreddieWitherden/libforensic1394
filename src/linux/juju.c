@@ -389,7 +389,7 @@ forensic1394_result send_request(forensic1394_dev *dev,
                                  size_t outlen, void *out)
 {
     struct fw_cdev_send_request request = {};
-    size_t response_len;
+    ssize_t response_len;
 
     // Fill out the request structure
     request.tcode       = tcode;
