@@ -175,9 +175,12 @@ forensic1394_result platform_enable_sbp2(forensic1394_bus *bus,
     }
 }
 
-void platform_update_device_list(forensic1394_bus *bus)
+forensic1394_result platform_update_device_list(forensic1394_bus *bus)
 {
     int i;
+    int perm_skipped = 0;
+    forensic1394_result ret = FORENSIC1394_RESULT_SUCCESS;
+
     glob_t globdev;
 
     // Glob the available firewire devices attached to the system
@@ -196,7 +199,13 @@ void platform_update_device_list(forensic1394_bus *bus)
         // Ensure the device was opened
         if (fd == -1)
         {
-            // Not fatal (usually perm related); continue
+            // See if the failure was due to a permissions problem
+            if (errno == EACCES)
+            {
+                perm_skipped++;
+            }
+
+            // Not fatal; continue
             continue;
         }
 
@@ -215,10 +224,13 @@ void platform_update_device_list(forensic1394_bus *bus)
         // See if the node is foreign (we only want attached devices)
         if (reset.node_id != reset.local_node_id)
         {
-            // Allocate memory for the device
+            // Allocate a new device
             forensic1394_dev *currdev = alloc_dev(devpath,
                                                   &reset,
                                                   rom);
+
+            // Save a reference to the bus
+            currdev->bus = bus;
 
             // See if we need to extend the device list; +1 as the last device
             // is always NULL, hence taking up a slot
@@ -227,8 +239,6 @@ void platform_update_device_list(forensic1394_bus *bus)
                 bus->size += FORENSIC1394_DEV_LIST_SZ;
                 bus->dev = realloc(bus->dev, sizeof(forensic1394_dev *) * bus->size);
             }
-
-            currdev->bus = bus;
 
             // Add this new device to the device list
             bus->dev[bus->ndev++] = currdev;
@@ -239,6 +249,15 @@ void platform_update_device_list(forensic1394_bus *bus)
     }
 
     globfree(&globdev);
+
+    // If we found no devices but were forced to skip some due to permission-
+    // related errors then return FORENSIC1394_RESULT_NO_PERM.
+    if (bus->ndev == 0 && perm_skipped > 0)
+    {
+        ret = FORENSIC1394_RESULT_NO_PERM;
+    }
+
+    return ret;
 }
 
 void platform_device_destroy(forensic1394_dev *dev)

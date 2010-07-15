@@ -157,6 +157,8 @@ forensic1394_dev **forensic1394_get_devices(forensic1394_bus *bus,
                                             int *ndev,
                                             forensic1394_device_callback ondestroy)
 {
+    forensic1394_result ret;
+
     assert(bus);
 
     // Void the current device list, freeing any memory associated with it
@@ -167,7 +169,7 @@ forensic1394_dev **forensic1394_get_devices(forensic1394_bus *bus,
     bus->size = FORENSIC1394_DEV_LIST_SZ;
 
     // Update the device list
-    platform_update_device_list(bus);
+    ret = platform_update_device_list(bus);
 
     // Ensure we have space to NULL terminate
     assert(bus->ndev < bus->size);
@@ -178,7 +180,7 @@ forensic1394_dev **forensic1394_get_devices(forensic1394_bus *bus,
     // If ndev was passed populate it with the number of devices
     if (ndev)
     {
-        *ndev = bus->ndev;
+        *ndev = (bus->ndev > 0) ? bus->ndev : ret;
     }
 
     // Save the ondestroy callback for later (may be NULL)

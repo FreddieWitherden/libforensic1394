@@ -72,7 +72,7 @@ void platform_bus_destory(forensic1394_bus *bus);
 forensic1394_result platform_enable_sbp2(forensic1394_bus *bus,
                                          const uint32_t *sbp2dir, size_t len);
 
-void platform_update_device_list(forensic1394_bus *bus);
+forensic1394_result platform_update_device_list(forensic1394_bus *bus);
 
 void platform_device_destroy(forensic1394_dev *dev);
 

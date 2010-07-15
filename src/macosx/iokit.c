@@ -218,7 +218,7 @@ cleanupNull:
     return fret;
 }
 
-void platform_update_device_list(forensic1394_bus *bus)
+forensic1394_result platform_update_device_list(forensic1394_bus *bus)
 {
     CFMutableDictionaryRef matchingDict;
 
@@ -226,7 +226,7 @@ void platform_update_device_list(forensic1394_bus *bus)
     io_object_t currdev;
 
     IOReturn iret;
-    forensic1394_result fret;   // Used but never returned
+    forensic1394_result fret;
 
     // We need to get the systems local device node to update the CSR
     matchingDict = IOServiceMatching("IOFireWireDevice");
@@ -331,6 +331,8 @@ void platform_update_device_list(forensic1394_bus *bus)
 
     // Release the iterator
     IOObjectRelease(iterator);
+
+    return fret;
 }
 
 void platform_device_destroy(forensic1394_dev *dev)

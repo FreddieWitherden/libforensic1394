@@ -156,8 +156,7 @@ typedef enum
  *
  *  \return A handle to a forensic1394_bus on success, NULL otherwise.
  */
-FORENSIC1394_DECL forensic1394_bus *
-forensic1394_alloc(void);
+FORENSIC1394_DECL forensic1394_bus *forensic1394_alloc(void);
 
 /**
  * \brief Provides an SBP-2 unit directory; required for DMA to Windows systems.
@@ -182,8 +181,15 @@ forensic1394_enable_sbp2(forensic1394_bus *bus);
  * \brief Gets the devices attached to the firewire bus.
  *
  * This method scans the (foreign) devices attached to \a bus and returns a
- *  NULL-terminated list of them.  \a ndev, if not NULL, will be set to the
- *  total number of devices.
+ *  NULL-terminated list of them.
+ *
+ * The out-parameter \a ndev, if not NULL, serves a dual purpose.  After a call
+ *  to the function if \c *ndev is:
+ *
+ *   - >= 0 then the call was successful and it contains the number of devices
+ *      attached to the system, which may be 0 if no devices are attached.
+ *   - < 0 then the call was not successful and it contains the appropriate
+ *      \a forensic1394_result error code.
  *
  * Getting the attached devices is a destructive process; voiding any existing
  *  device handles.  To compensate for this the \a ondestroy callback is
@@ -201,6 +207,7 @@ forensic1394_enable_sbp2(forensic1394_bus *bus);
  *  \return A NULL-terminated list of devices.
  *
  * \sa forensic1394_device_callback
+ * \sa forensic1394_result
  */
 FORENSIC1394_DECL forensic1394_dev **
 forensic1394_get_devices(forensic1394_bus *bus,
