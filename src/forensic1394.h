@@ -26,7 +26,6 @@
  * This API gives you access to the firewire bus of contemporary operating
  *  systems in order to facilitate digital forensics on an attached device.
  *  Unlike existing APIs Forensic1394 is:
- *
  *   - Modern; unlike existing firewire libraries Forensic1394 supports the
  *      new `Juju' stack introduced in Linux 2.6.22.
  *   - Portable; with platform drivers existing for both Linux (Juju stack
@@ -60,11 +59,11 @@
  * Bus resets occur when devices are added/removed from the system or when the
  *  configuration ROM of a device is updated.  The following methods are
  *  affected by bus resets:
- *
  *   - \c forensic1394_open_device
  *   - \c forensic1394_read_device
  *   - \c forensic1394_read_device
  *
+ * \par
  * After a bus reset calls to all three of these methods will result in
  *  \c FORENSIC1394_RESULT_BUS_RESET being returned.  Applications should
  *  handle this by saving the GUIDs of any devices being accessed and then call
@@ -91,8 +90,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+/// An opaque bus handle
 typedef struct _forensic1394_bus forensic1394_bus;
 
+/// An opaque device handle
 typedef struct _forensic1394_dev forensic1394_dev;
 
 /**
