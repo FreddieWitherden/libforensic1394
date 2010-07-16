@@ -22,6 +22,8 @@ from ctypes import cdll, CFUNCTYPE, POINTER, c_int, c_size_t, c_uint64, \
                    c_uint32, c_uint16, c_void_p, c_char, c_char_p
 from ctypes.util import find_library
 
+from forensic1394.errors import process_result
+
 # Try to find the forensic1394 shared library
 loc = find_library("forensic1394")
 
@@ -54,6 +56,7 @@ forensic1394_alloc.restype = busptr
 forensic1394_enable_sbp2 = lib.forensic1394_enable_sbp2
 forensic1394_enable_sbp2.argtypes = [busptr]
 forensic1394_enable_sbp2.restype = c_int
+forensic1394_enable_sbp2.errcheck = process_result
 
 # Wrap the get devices function
 # C def: forensic1394_dev **forensic1394_get_devices(forensic1394_bus *bus,
@@ -74,6 +77,7 @@ forensic1394_destroy.restype = None
 forensic1394_open_device = lib.forensic1394_open_device
 forensic1394_open_device.argtypes = [devptr]
 forensic1394_open_device.restype = c_int
+forensic1394_open_device.errcheck = process_result
 
 # Wrap the close device function
 # C def: void forensic1394_close_device(forensic1394_dev *dev)
@@ -94,6 +98,7 @@ forensic1394_is_device_open.restype = c_int
 forensic1394_read_device = lib.forensic1394_read_device
 forensic1394_read_device.argtypes = [devptr, c_uint64, c_size_t, POINTER(c_char)]
 forensic1394_read_device.restype = c_int
+forensic1394_read_device.errcheck = process_result
 
 # Wrap the write device function
 # C def: forensic1394_result forensic1394_write_device(forensic1394_dev *dev,
@@ -102,6 +107,7 @@ forensic1394_read_device.restype = c_int
 forensic1394_write_device = lib.forensic1394_write_device
 forensic1394_write_device.argtypes = [devptr, c_uint64, c_size_t, POINTER(c_char)]
 forensic1394_write_device.restype = c_int
+forensic1394_write_device.errcheck = process_result
 
 # Wrap the device CSR function
 # C def: void forensic1394_get_device_csr(forensic1394_dev *dev, uint32_t *rom)

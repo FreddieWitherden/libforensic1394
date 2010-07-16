@@ -42,3 +42,11 @@ class Forensic1394BusReset(Forensic1394Exception, IOError):
 
 class Forensic1394StaleHandle(Forensic1394Exception, IOError):
     pass
+
+def process_result(result, fn, args):
+    if result is ResultCode.Success:
+        return result
+    elif result is ResultCode.BusReset:
+        raise Forensic1394BusReset(fn.__name__ + ": A bus reset has occured")
+    else:
+        raise IOError(fn.__name__)

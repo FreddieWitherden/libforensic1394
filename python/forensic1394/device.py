@@ -18,10 +18,11 @@
 #   <http://www.gnu.org/licenses/>.                                        #
 ############################################################################
 
+import sys
+
 from ctypes import create_string_buffer, c_size_t, c_uint32
 
-from forensic1394.errors import ResultCode, Forensic1394BusReset, \
-                                Forensic1394StaleHandle
+from forensic1394.errors import process_result, Forensic1394StaleHandle
 
 from forensic1394.functions import forensic1394_open_device, \
                                    forensic1394_close_device, \
@@ -81,13 +82,10 @@ class Device(object):
         Attempts to open the device.  If the device can not be opened, or if the
         device is stale, an exception is raised.
         """
-        result = forensic1394_open_device(self)
-        
-        if result is not ResultCode.Success:
-            if result is ResultCode.BusReset:
-                raise Forensic1394BusReset
-            else:
-                raise IOError
+        try:
+            forensic1394_open_device(self)
+        except:
+            raise sys.exc_info()[1]
         
     
     def close(self):
@@ -109,17 +107,16 @@ class Device(object):
         device must be open and the handle can not be stale.  The resulting data
         is returned.  An exception is raised should an errors occur.
         """
+        assert self.is_open()
+        
         # Allocate a buffer for the data
         b = create_string_buffer(numb)
         
-        result = forensic1394_read_device(self, addr, numb, b)
-        
-        if result is not ResultCode.Success:
-            if result is ResultCode.BusReset:
-                raise Forensic1394BusReset
-            else:
-                raise IOError
-        
+        try:
+            forensic1394_read_device(self, addr, numb, b)
+        except Exception:
+            raise sys.exc_info()[1]
+
         return b.raw
     
     @checkStale
@@ -131,10 +128,9 @@ class Device(object):
         buffer up into chunks no larger than the maximum request size (usually
         >= 2048-bytes) determined from parsing the CSR.
         """
-        result = forensic1394_write_device(self, addr, len(buf), buf)
+        assert self.is_open()
         
-        if result is not ResultCode.Success:
-            if result is ResultCode.BusReset:
-                raise Forensic1394BusReset
-            else:
-                raise IOError
+        try:
+            forensic1394_write_device(self, addr, len(buf), buf)
+        except Exception:
+            raise sys.exc_info()[1]
