@@ -95,7 +95,7 @@ platform_bus *platform_bus_alloc(void)
 void platform_bus_destory(forensic1394_bus *bus)
 {
     // If the SBP-2 unit directory is enabled close its fd
-    if (bus->sbp2Enabled)
+    if (bus->sbp2_enabled)
     {
         assert(bus->pbus->sbp2_fd != -1);
 
@@ -331,7 +331,7 @@ forensic1394_dev *alloc_dev(const char *devpath,
     dev->pdev->fd = -1;
 
     // The device is not open-by-default
-    dev->isOpen = 0;
+    dev->is_open = 0;
 
     // Copy the ROM over (this comes from an ioctl as opposed to sysfs)
     memcpy(dev->rom, rom, sizeof(dev->rom));

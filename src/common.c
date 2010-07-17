@@ -79,7 +79,7 @@ forensic1394_bus *forensic1394_alloc(void)
     }
 
     // SBP-2 needs to be enabled explicitly
-    b->sbp2Enabled = 0;
+    b->sbp2_enabled = 0;
 
     // We have no devices (yet!)
     b->dev = NULL;
@@ -136,7 +136,7 @@ forensic1394_result forensic1394_enable_sbp2(forensic1394_bus *bus)
     assert(bus);
 
     // Check that it is not already enabled
-    if (bus->sbp2Enabled)
+    if (bus->sbp2_enabled)
     {
         return 1;
     }
@@ -147,7 +147,7 @@ forensic1394_result forensic1394_enable_sbp2(forensic1394_bus *bus)
     // If successful mark SBP-2 as being enabled
     if (ret == FORENSIC1394_RESULT_SUCCESS)
     {
-        bus->sbp2Enabled = 1;
+        bus->sbp2_enabled = 1;
     }
 
     return ret;
@@ -207,7 +207,7 @@ forensic1394_result forensic1394_open_device(forensic1394_dev *dev)
     // If successful mark the device as open
     if (ret == FORENSIC1394_RESULT_SUCCESS)
     {
-        dev->isOpen = 1;
+        dev->is_open = 1;
     }
 
     return ret;
@@ -226,7 +226,7 @@ void forensic1394_close_device(forensic1394_dev *dev)
     platform_close_device(dev);
 
     // The device is now closed
-    dev->isOpen = 0;
+    dev->is_open = 0;
 }
 
 void *forensic1394_get_device_user_data(forensic1394_dev *dev)
@@ -249,7 +249,7 @@ forensic1394_result forensic1394_read_device(forensic1394_dev *dev,
                                              void *buf)
 {
     assert(dev);
-    assert(dev->isOpen);
+    assert(dev->is_open);
 
     // Mask the top 16-bits of the address
     addr &= 0x0000ffffffffffffULL;
@@ -263,7 +263,7 @@ forensic1394_result forensic1394_write_device(forensic1394_dev *dev,
                                               void *buf)
 {
     assert(dev);
-    assert(dev->isOpen);
+    assert(dev->is_open);
 
     // Mask the top 16-bits of the address
     addr &= 0x0000ffffffffffffULL;
@@ -290,7 +290,7 @@ int forensic1394_is_device_open(forensic1394_dev *dev)
 {
     assert(dev);
 
-    return dev->isOpen;
+    return dev->is_open;
 }
 
 const char *forensic1394_get_device_product_name(forensic1394_dev *dev)

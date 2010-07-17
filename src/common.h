@@ -31,7 +31,7 @@ typedef struct _platform_dev platform_dev;
 
 struct _forensic1394_bus
 {
-    int sbp2Enabled;
+    int sbp2_enabled;
 
     forensic1394_dev **dev;
     int ndev;
@@ -52,7 +52,7 @@ struct _forensic1394_dev
     char vendor_name[FORENSIC1394_DEV_NAME_SZ];
     int vendor_id;
 
-    int isOpen;
+    int is_open;
 
     uint16_t nodeid;
     uint32_t generation;

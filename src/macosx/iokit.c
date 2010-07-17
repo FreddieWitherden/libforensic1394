@@ -110,7 +110,7 @@ platform_bus *platform_bus_alloc()
 void platform_bus_destory(forensic1394_bus *bus)
 {
     // Un-publish any changes we made to the CSR
-    if (bus->sbp2Enabled)
+    if (bus->sbp2_enabled)
     {
         assert(bus->pbus->localDev);
         assert(bus->pbus->localUnitDir);
@@ -271,7 +271,7 @@ forensic1394_result platform_update_device_list(forensic1394_bus *bus)
         fdev->bus = bus;
 
         // The device is not open
-        fdev->isOpen = 0;
+        fdev->is_open = 0;
 
         // Get the product name
         copy_device_property_string(currdev, CFSTR("FireWire Product Name"),
