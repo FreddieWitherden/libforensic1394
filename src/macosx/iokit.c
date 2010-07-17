@@ -278,14 +278,14 @@ forensic1394_result platform_update_device_list(forensic1394_bus *bus)
                                     fdev->product_name, sizeof(fdev->product_name));
 
         // Get the product id
-        copy_device_property_int(currdev, CFSTR("FireWire Product ID"), &fdev->product_id);
+        copy_device_property_int(currdev, CFSTR("Model_ID"), &fdev->product_id);
 
         // Get the vendor name
         copy_device_property_string(currdev, CFSTR("FireWire Vendor Name"),
                                     fdev->vendor_name, sizeof(fdev->vendor_name));
 
         // Get the vendor id
-        copy_device_property_int(currdev, CFSTR("FireWire Vendor ID"), &fdev->vendor_id);
+        copy_device_property_int(currdev, CFSTR("Vendor_ID"), &fdev->vendor_id);
 
         // Copy the ROM
         copy_device_property_csr(currdev, fdev->rom);
