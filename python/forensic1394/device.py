@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
-############################################################################
-#   This file is part of Forensic1394.                                     #
-#   Copyright (C) 2010  Freddie Witherden <freddie@witherden.org>          #
-#                                                                          #
-#   Forensic1394 is free software: you can redistribute it and/or modify   #
-#   it under the terms of the GNU Lesser General Public License as         #
-#   published by the Free Software Foundation, either version 3 of the     #
-#   License, or (at your option) any later version.                        #
-#                                                                          #
-#   Forensic1394 is distributed in the hope that it will be useful,        #
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of         #
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          #
-#   GNU Lesser General Public License for more details.                    #
-#                                                                          #
-#   You should have received a copy of the GNU Lesser General Public       #
-#   License along with Forensic1394.  If not, see                          #
-#   <http://www.gnu.org/licenses/>.                                        #
-############################################################################
+#############################################################################
+#  This file is part of libforensic1394.                                    #
+#  Copyright (C) 2010  Freddie Witherden <freddie@witherden.org>            #
+#                                                                           #
+#  libforensic1394 is free software: you can redistribute it and/or modify  #
+#  it under the terms of the GNU Lesser General Public License as           #
+#  published by the Free Software Foundation, either version 3 of the       #
+#  License, or (at your option) any later version.                          #
+#                                                                           #
+#  libforensic1394 is distributed in the hope that it will be useful,       #
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of           #
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            #
+#  GNU Lesser General Public License for more details.                      #
+#                                                                           #
+#  You should have received a copy of the GNU Lesser General Public         #
+#  License along with libforensic1394.  If not, see                         #
+#  <http://www.gnu.org/licenses/>.                                          #
+#############################################################################
 
 import sys
 
@@ -50,32 +50,32 @@ class Device(object):
         directly; instead a list of pre-constructed Device instances should be
         requested from the bus.
         """
-        
+
         # Retain a reference to the Bus (otherwise unused)
         self._bus = bus
-        
+
         # Set as _as_parameter_ to allow passing of self to functions
         self._as_parameter_ = devptr
-        
+
         # We are not stale
         self._stale = False
-        
+
         # Copy over static attributes
         self.nodeid = forensic1394_get_device_nodeid(self)
-        
+
         self.product_name = forensic1394_get_device_product_name(self)
         self.product_id = forensic1394_get_device_product_id(self)
-        
+
         self.vendor_name = forensic1394_get_device_vendor_name(self)
         self.vendor_id = forensic1394_get_device_vendor_id(self)
-        
+
         self.csr = (c_uint32 * 256)()
         forensic1394_get_device_csr(self, self.csr)
 
     def __del__(self):
         if self.is_open():
             self.close()
-    
+
     @checkStale
     def open(self):
         """
@@ -86,20 +86,20 @@ class Device(object):
             forensic1394_open_device(self)
         except:
             raise sys.exc_info()[1]
-        
-    
+
+
     def close(self):
         """
         Closes the device.
         """
         forensic1394_close_device(self)
-        
+
     def is_open(self):
         """
         Checks to see if the device is open or not, returning a boolean value.
         """
         return bool(forensic1394_is_device_open(self))
-        
+
     @checkStale
     def read(self, addr, numb):
         """
@@ -108,17 +108,17 @@ class Device(object):
         is returned.  An exception is raised should an errors occur.
         """
         assert self.is_open()
-        
+
         # Allocate a buffer for the data
         b = create_string_buffer(numb)
-        
+
         try:
             forensic1394_read_device(self, addr, numb, b)
         except Exception:
             raise sys.exc_info()[1]
 
         return b.raw
-    
+
     @checkStale
     def write(self, addr, buf):
         """
@@ -129,7 +129,7 @@ class Device(object):
         >= 2048-bytes) determined from parsing the CSR.
         """
         assert self.is_open()
-        
+
         try:
             forensic1394_write_device(self, addr, len(buf), buf)
         except Exception:

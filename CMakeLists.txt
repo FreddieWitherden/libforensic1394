@@ -1,6 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-PROJECT(forensic1394)
+PROJECT(libforensic1394)
 
 # Current version of the library
 SET(FORENSIC1394_VERSION_MAJOR 0)
