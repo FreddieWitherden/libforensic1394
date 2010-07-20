@@ -19,7 +19,7 @@
 #############################################################################
 
 from ctypes import cdll, CFUNCTYPE, POINTER, c_int, c_size_t, c_uint64, \
-                   c_uint32, c_uint16, c_void_p, c_char, c_char_p
+                   c_int64, c_uint32, c_uint16, c_void_p, c_char, c_char_p
 from ctypes.util import find_library
 
 from forensic1394.errors import process_result
@@ -120,6 +120,12 @@ forensic1394_get_device_csr.restype = None
 forensic1394_get_device_nodeid = lib.forensic1394_get_device_nodeid
 forensic1394_get_device_nodeid.argtypes = [devptr]
 forensic1394_get_device_nodeid.restype = c_uint16
+
+# Wrap the device guid function
+# C def: int64_t forensic1394_get_device_guid(forensic1394_dev *dev)
+forensic1394_get_device_guid = lib.forensic1394_get_device_guid
+forensic1394_get_device_guid.argtypes = [devptr]
+forensic1394_get_device_guid.restype = c_int64
 
 # Wrap the device product name function
 # C def: const char *forensic1394_get_device_product_name(forensic1394_dev *dev)

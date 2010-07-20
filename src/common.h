@@ -57,6 +57,8 @@ struct _forensic1394_dev
     uint16_t nodeid;
     uint32_t generation;
 
+    int64_t guid;
+
     uint32_t rom[256];
 
     void *user_data;

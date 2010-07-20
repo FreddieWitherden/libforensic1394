@@ -31,6 +31,7 @@ from forensic1394.functions import forensic1394_open_device, \
                                    forensic1394_write_device, \
                                    forensic1394_get_device_csr, \
                                    forensic1394_get_device_nodeid, \
+                                   forensic1394_get_device_guid, \
                                    forensic1394_get_device_product_name, \
                                    forensic1394_get_device_product_id, \
                                    forensic1394_get_device_vendor_name, \
@@ -62,6 +63,7 @@ class Device(object):
 
         # Copy over static attributes
         self.nodeid = forensic1394_get_device_nodeid(self)
+        self.guid = forensic1394_get_device_guid(self)
 
         self.product_name = forensic1394_get_device_product_name(self)
         self.product_id = forensic1394_get_device_product_id(self)

@@ -286,6 +286,13 @@ uint16_t forensic1394_get_device_nodeid(forensic1394_dev *dev)
     return dev->nodeid;
 }
 
+int64_t forensic1394_get_device_guid(forensic1394_dev *dev)
+{
+    assert(dev);
+
+    return dev->guid;
+}
+
 int forensic1394_is_device_open(forensic1394_dev *dev)
 {
     assert(dev);

@@ -92,7 +92,16 @@ static void copy_device_property_string(io_registry_entry_t dev,
 
 static void copy_device_property_int(io_registry_entry_t dev,
                                      CFStringRef prop,
-                                     int *num);
+                                     void *num,
+                                     CFNumberType type);
+
+static void copy_device_property_int32(io_registry_entry_t dev,
+                                       CFStringRef prop,
+                                       int32_t *num);
+
+static void copy_device_property_int64(io_registry_entry_t dev,
+                                       CFStringRef prop,
+                                       int64_t *num);
 
 static void copy_device_property_csr(io_registry_entry_t dev,
                                      uint32_t *rom);
@@ -278,14 +287,17 @@ forensic1394_result platform_update_device_list(forensic1394_bus *bus)
                                     fdev->product_name, sizeof(fdev->product_name));
 
         // Get the product id
-        copy_device_property_int(currdev, CFSTR("Model_ID"), &fdev->product_id);
+        copy_device_property_int32(currdev, CFSTR("Model_ID"), &fdev->product_id);
 
         // Get the vendor name
         copy_device_property_string(currdev, CFSTR("FireWire Vendor Name"),
                                     fdev->vendor_name, sizeof(fdev->vendor_name));
 
         // Get the vendor id
-        copy_device_property_int(currdev, CFSTR("Vendor_ID"), &fdev->vendor_id);
+        copy_device_property_int32(currdev, CFSTR("Vendor_ID"), &fdev->vendor_id);
+
+        // Get the GUID
+        copy_device_property_int64(currdev, CFSTR("GUID"), &fdev->guid);
 
         // Copy the ROM
         copy_device_property_csr(currdev, fdev->rom);
@@ -463,12 +475,11 @@ void copy_device_property_string(io_registry_entry_t dev,
 
 void copy_device_property_int(io_registry_entry_t dev,
                               CFStringRef prop,
-                              int *num)
+                              void *num,
+                              CFNumberType type)
 {
     // Attempt to extract the property as a CFNumber
     CFNumberRef propnum = IORegistryEntryCreateCFProperty(dev, prop, NULL, 0);
-
-    *num = 0;
 
     // Ensure that the property exists
     if (propnum)
@@ -476,8 +487,8 @@ void copy_device_property_int(io_registry_entry_t dev,
         // And that it is really a CFNumber
         if (CFGetTypeID(propnum) == CFNumberGetTypeID())
         {
-            // Copy the string to the buffer provided
-            CFNumberGetValue(propnum, kCFNumberIntType, num);
+            // Copy the number to the buffer provided
+            CFNumberGetValue(propnum, type, num);
         }
         // Invalid property type
         else
@@ -493,6 +504,24 @@ void copy_device_property_int(io_registry_entry_t dev,
     {
         return;
     }
+}
+
+void copy_device_property_int32(io_registry_entry_t dev,
+                                CFStringRef prop,
+                                int32_t *num)
+{
+    *num = 0;
+
+    copy_device_property_int(dev, prop, num, kCFNumberSInt32Type);
+}
+
+void copy_device_property_int64(io_registry_entry_t dev,
+                                CFStringRef prop,
+                                int64_t *num)
+{
+    *num = 0;
+
+    copy_device_property_int(dev, prop, num, kCFNumberSInt64Type);
 }
 
 void copy_device_property_csr(io_registry_entry_t dev,

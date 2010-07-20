@@ -363,6 +363,18 @@ FORENSIC1394_DECL uint16_t
 forensic1394_get_device_nodeid(forensic1394_dev *dev);
 
 /**
+ * \brief Returns the GUID of the device.
+ *
+ * Fetches and returns the GUID of the device \a dev.  This is a 48-bit value,
+ *  similar to a MAC address, that uniquely identifies a FireWire device.
+ *
+ *   \param dev The device.
+ *  \return The GUID of the device.
+ */
+FORENSIC1394_DECL int64_t
+forensic1394_get_device_guid(forensic1394_dev *dev);
+
+/**
  * \brief Returns the product name of the device, if any.
  *
  * Returns the product name of the device \a dev.  Should the property not

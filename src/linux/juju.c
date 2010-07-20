@@ -356,6 +356,10 @@ forensic1394_dev *alloc_dev(const char *devpath,
     read_fw_sysfs_prop(devpath, "vendor", tmp, sizeof(tmp));
     dev->vendor_id = strtol(tmp, NULL, 0);
 
+    // GUID
+    read_fw_sysfs_prop(devpath, "guid", tmp, sizeof(tmp));
+    dev->guid = strtoll(tmp, NULL, 0);
+
     return dev;
 }
 
