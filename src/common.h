@@ -59,7 +59,7 @@ struct _forensic1394_dev
 
     int64_t guid;
 
-    uint32_t rom[256];
+    uint32_t rom[FORENSIC1394_CSR_SZ];
 
     void *user_data;
 

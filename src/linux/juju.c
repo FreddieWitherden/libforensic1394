@@ -191,7 +191,7 @@ forensic1394_result platform_update_device_list(forensic1394_bus *bus)
         const char *devpath = globdev.gl_pathv[i];
         struct fw_cdev_get_info get_info = {};
         struct fw_cdev_event_bus_reset reset = {};
-        uint32_t rom[256];
+        uint32_t rom[FORENSIC1394_CSR_SZ];
 
         // Open up the device
         int fd = open(devpath, O_RDWR);
@@ -212,7 +212,7 @@ forensic1394_result platform_update_device_list(forensic1394_bus *bus)
         // Fill out an info request
         get_info.version    = FW_CDEV_VERSION;
         get_info.rom        = PTR_TO_U64(rom);
-        get_info.rom_length = 1024;
+        get_info.rom_length = sizeof(rom)
         get_info.bus_reset  = PTR_TO_U64(&reset);
 
         // Send the request

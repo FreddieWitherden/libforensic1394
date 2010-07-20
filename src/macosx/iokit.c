@@ -551,7 +551,7 @@ void copy_device_property_csr(io_registry_entry_t dev,
                     CFRange datarange = CFRangeMake(0, CFDataGetLength(romdata));
 
                     // Check the size is not > 1024 bytes
-                    assert(datarange.length <= 1024);
+                    assert(datarange.length <= (FORENSIC1394_CSR_SZ * sizeof(uint32_t)));
 
                     // Copy the data to the buffer
                     CFDataGetBytes(romdata, datarange, (UInt8 *) rom);

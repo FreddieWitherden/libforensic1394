@@ -97,6 +97,14 @@ typedef struct _forensic1394_bus forensic1394_bus;
 typedef struct _forensic1394_dev forensic1394_dev;
 
 /**
+ * \brief Number of uint32 elements required to store a device ROM.
+ *
+ * A FireWire configuration status ROM (`csr') is made up of unsigned 32-bit
+ *  integers.  The maximum size of a ROM is 1024-bytes, giving 256 elements.
+ */
+#define FORENSIC1394_CSR_SZ 256
+
+/**
  * A function to be called when a \c forensic1394_dev is about to be destroyed.
  *  This should be passed to \c forensic1394_get_devices and will be associated
  *  with all devices returned by the method.  The callback will fire either when
@@ -340,10 +348,11 @@ forensic1394_write_device(forensic1394_dev *dev,
  * \brief Copies the configuration ROM for the device \a dev into \a rom.
  *
  * Fetches the configuration status ROM (`csr') for the device and copies it
- *  into ROM. rom is assumed to be at least 1024 bytes in size (256 entires).
+ *  into \a rom.  This is assumed to be of at least \c FORENSIC1394_CSR_SZ
+ *  elements in size.  Any unused space will be filled with zeros.
  *
  *   \param dev The device.
- *   \param rom The pointer to copy the CSR into.
+ *   \param rom The array to copy the CSR into.
  */
 FORENSIC1394_DECL void
 forensic1394_get_device_csr(forensic1394_dev *dev,
