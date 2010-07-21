@@ -75,7 +75,7 @@ class Device(object):
         forensic1394_get_device_csr(self, self.csr)
 
     def __del__(self):
-        if self.is_open():
+        if self.isopen():
             self.close()
 
     @checkStale
@@ -96,7 +96,7 @@ class Device(object):
         """
         forensic1394_close_device(self)
 
-    def is_open(self):
+    def isopen(self):
         """
         Checks to see if the device is open or not, returning a boolean value.
         """
@@ -109,7 +109,7 @@ class Device(object):
         device must be open and the handle can not be stale.  The resulting data
         is returned.  An exception is raised should an errors occur.
         """
-        assert self.is_open()
+        assert self.isopen()
 
         # Allocate a buffer for the data
         b = create_string_buffer(numb)
@@ -130,7 +130,7 @@ class Device(object):
         buffer up into chunks no larger than the maximum request size (usually
         >= 2048-bytes) determined from parsing the CSR.
         """
-        assert self.is_open()
+        assert self.isopen()
 
         try:
             forensic1394_write_device(self, addr, len(buf), buf)
