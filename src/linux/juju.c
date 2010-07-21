@@ -39,7 +39,7 @@
 
 // The kernel ioctl structures store pointers as 64-bit integers
 #define PTR_TO_U64(p) ((__u64)(p))
-#define U64_TO_PTR(p) ((void *)(__u64)(p)
+#define U64_TO_PTR(p) ((void *)(p))
 
 /*
  * These constants come from linux/drivers/firewire/fw-device.h and are used
@@ -60,8 +60,8 @@ struct _platform_dev
 };
 
 static forensic1394_dev *alloc_dev(const char *devpath,
-                                   const struct fw_cdev_event_bus_reset *reset,
-                                   const uint32_t *rom);
+                                   const struct fw_cdev_get_info *info,
+                                   const struct fw_cdev_event_bus_reset *reset);
 
 /**
  * Attempts to read a firewire sysfs property for the firewire device specified
@@ -226,8 +226,8 @@ forensic1394_result platform_update_device_list(forensic1394_bus *bus)
         {
             // Allocate a new device
             forensic1394_dev *currdev = alloc_dev(devpath,
-                                                  &reset,
-                                                  rom);
+                                                  &get_info,
+                                                  &reset);
 
             // Save a reference to the bus
             currdev->bus = bus;
@@ -313,13 +313,13 @@ forensic1394_result platform_write_device(forensic1394_dev *dev,
 }
 
 forensic1394_dev *alloc_dev(const char *devpath,
-                            const struct fw_cdev_event_bus_reset *reset,
-                            const uint32_t *rom)
+                            const struct fw_cdev_get_info *info,
+                            const struct fw_cdev_event_bus_reset *reset)
 {
     char tmp[128];
 
-    // Allocate memory for a device
-    forensic1394_dev *dev = malloc(sizeof(forensic1394_dev));
+    // Allocate memory for a device (calloc initialises to 0)
+    forensic1394_dev *dev = calloc(1, sizeof(forensic1394_dev));
 
     // And for the platform-specific stuff
     dev->pdev = malloc(sizeof(platform_dev));
@@ -330,11 +330,8 @@ forensic1394_dev *alloc_dev(const char *devpath,
     // Mark the file descriptor as invalid
     dev->pdev->fd = -1;
 
-    // The device is not open-by-default
-    dev->is_open = 0;
-
     // Copy the ROM over (this comes from an ioctl as opposed to sysfs)
-    memcpy(dev->rom, rom, sizeof(dev->rom));
+    memcpy(dev->rom, U64_TO_PTR(info->rom), info->rom_length);
 
     // Same with the node ID and generation
     dev->nodeid     = reset->node_id;
