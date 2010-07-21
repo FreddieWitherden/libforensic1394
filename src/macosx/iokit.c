@@ -19,6 +19,8 @@
 
 #include "common.h"
 
+#include <arpa/inet.h>  // For ntohl
+
 #include <CoreFoundation/CoreFoundation.h>
 #include <IOKit/IOKitLib.h>
 #include <IOKit/firewire/IOFireWireLib.h>
@@ -533,6 +535,8 @@ void copy_device_property_csr(io_registry_entry_t dev,
                                                               NULL,
                                                               0);
 
+    memset(rom, '\0', FORENSIC1394_CSR_SZ * sizeof(uint32_t));
+
     // Ensure the ROM dictionary exists
     if (romdict)
     {
@@ -548,6 +552,8 @@ void copy_device_property_csr(io_registry_entry_t dev,
                 // And that it is really a data type
                 if (CFGetTypeID(romdata) == CFDataGetTypeID())
                 {
+                    int i;
+
                     CFRange datarange = CFRangeMake(0, CFDataGetLength(romdata));
 
                     // Check the size is not > 1024 bytes
@@ -555,6 +561,12 @@ void copy_device_property_csr(io_registry_entry_t dev,
 
                     // Copy the data to the buffer
                     CFDataGetBytes(romdata, datarange, (UInt8 *) rom);
+
+                    // Convert from big-endian to CPU-endian (no-op on PPC Macs)
+                    for (i = 0; i < (datarange.length / sizeof(uint32_t)); i++)
+                    {
+                        rom[i] = ntohl(rom[i]);
+                    }
                 }
 
                 // Release the data
