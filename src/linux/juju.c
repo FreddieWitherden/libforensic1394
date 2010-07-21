@@ -212,7 +212,7 @@ forensic1394_result platform_update_device_list(forensic1394_bus *bus)
         // Fill out an info request
         get_info.version    = FW_CDEV_VERSION;
         get_info.rom        = PTR_TO_U64(rom);
-        get_info.rom_length = sizeof(rom)
+        get_info.rom_length = sizeof(rom);
         get_info.bus_reset  = PTR_TO_U64(&reset);
 
         // Send the request
