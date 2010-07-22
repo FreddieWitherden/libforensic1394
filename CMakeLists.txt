@@ -114,19 +114,33 @@ ELSE()
 ENDIF()
 
 # CPack package generation (must be set before we include CPack)
-SET(CPACK_GENERATOR TGZ)
 SET(CPACK_PACKAGE_VENDOR "Freddie Witherden")
 SET(CPACK_PACKAGE_VERSION_MAJOR ${FORENSIC1394_VERSION_MAJOR})
 SET(CPACK_PACKAGE_VERSION_MINOR ${FORENSIC1394_VERSION_MINOR})
 SET(CPACK_PACKAGE_VERSION_PATCH ${FORENSIC1394_VERSION_PATCH})
 
-# Debian packages really should have a valid maintainer
-IF(CPACK_BINARY_DEB AND NOT CPACK_DEBIAN_PACKAGE_MAINTAINER)
-    MESSAGE(STATUS "Debian package requested but CPACK_DEBIAN_PACKAGE_MAINTAINER "
-                    "is not set. Defaulting to \"Unknown\"")
+# We only want TGZ packages by default
+SET(CPACK_GENERATOR TGZ)
 
+# See if we can build DEB/RPM packages
+FIND_PROGRAM(FORENSIC1394_HAVE_DPKG dpkg)
+FIND_PROGRAM(FORENSIC1394_HAVE_RPMBUILD rpmbuild)
+
+IF(FORENSIC1394_HAVE_DPKG)
+    MESSAGE(STATUS "Dpkg found. Enabling Debian packages.")
     SET(CPACK_GENERATOR ${CPACK_GENERATOR} DEB)
-    SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Unknown")
+
+    # Debian packages really should have a valid maintainer
+    IF(NOT CPACK_DEBIAN_PACKAGE_MAINTAINER)
+        MESSAGE(STATUS "CPACK_DEBIAN_PACKAGE_MAINTAINER is not set. "
+                       "Defaulting to \"Unknown\"")
+        SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Unknown")
+    ENDIF()
+ENDIF()
+
+IF(FORENSIC1394_HAVE_RPMBUILD)
+    MESSAGE(STATUS "Rpmbuild found. Enabling RPM packages.")
+    SET(CPACK_GENERATOR ${CPACK_GENERATOR} RPM)
 ENDIF()
 
 INCLUDE(CPack)
