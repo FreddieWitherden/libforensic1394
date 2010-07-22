@@ -18,8 +18,6 @@
 #  <http://www.gnu.org/licenses/>.                                          #
 #############################################################################
 
-import sys
-
 from ctypes import c_int, byref
 
 from forensic1394.errors import process_result
@@ -39,10 +37,7 @@ class Bus(object):
 
     def enable_sbp2(self):
         # Re-raise for a cleaner stack trace
-        try:
-            forensic1394_enable_sbp2(self)
-        except Exception:
-            raise sys.exc_info()[1]
+        forensic1394_enable_sbp2(self)
 
     def devices(self):
         # Mark any active device handles as being stale, preventing further use

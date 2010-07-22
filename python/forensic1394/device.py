@@ -18,8 +18,6 @@
 #  <http://www.gnu.org/licenses/>.                                          #
 #############################################################################
 
-import sys
-
 from ctypes import create_string_buffer, c_size_t, c_uint32
 
 from forensic1394.errors import process_result, Forensic1394StaleHandle
@@ -84,11 +82,7 @@ class Device(object):
         Attempts to open the device.  If the device can not be opened, or if the
         device is stale, an exception is raised.
         """
-        try:
-            forensic1394_open_device(self)
-        except:
-            raise sys.exc_info()[1]
-
+        forensic1394_open_device(self)
 
     def close(self):
         """
@@ -114,10 +108,7 @@ class Device(object):
         # Allocate a buffer for the data
         b = create_string_buffer(numb)
 
-        try:
-            forensic1394_read_device(self, addr, numb, b)
-        except Exception:
-            raise sys.exc_info()[1]
+        forensic1394_read_device(self, addr, numb, b)
 
         return b.raw
 
@@ -132,7 +123,4 @@ class Device(object):
         """
         assert self.isopen()
 
-        try:
-            forensic1394_write_device(self, addr, len(buf), buf)
-        except Exception:
-            raise sys.exc_info()[1]
+        forensic1394_write_device(self, addr, len(buf), buf)
