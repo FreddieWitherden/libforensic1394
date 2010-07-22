@@ -77,6 +77,11 @@
 #ifndef _FORENSIC_1394_H
 #define _FORENSIC_1394_H
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #if defined(FORENSIC1394_DECL)
     // No op
 #elif defined(_MSC_VER)
@@ -473,5 +478,9 @@ forensic1394_set_device_user_data(forensic1394_dev *dev, void *u);
  */
 FORENSIC1394_DECL const char *
 forensic1394_get_result_str(forensic1394_result r);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // _FORENSIC_1394_H
