@@ -1,0 +1,143 @@
+                           libforensic1394
+
+About libforensic1394
+
+  libforensic1394 is  a library  for performing memory  forensics over
+  the  IEEE 1394  (“FireWire”) interface.   Unlike  existing libraries
+  libforensic1394 supports  the new  ‘Juju’ stack introduced  in Linux
+  2.6.22 as  well as  recent versions  of Mac OS  X through  IOKit. In
+  addition  to  a  C  API  Python bindings  (using  ctypes)  are  also
+  provided.
+
+  Further information on libforensic1394 can be found at:
+
+    http://freddie.witherden.org/tools/libforensic1394/
+
+  Contact information can be found in the `AUTHORS` file.
+
+Runtime Requirements
+
+  GNU/Linux
+
+    A recent  version of  Linux running a  2.6.22 kernel  (or later)
+    with the  ‘Juju’ stack compiled either  into the kernel  or as a
+    loadable module. Presence of the  new stack can be determined by
+    analysing the output of:
+
+      $ ls /dev | grep fw
+
+    If  the new  stack is  loaded and  the system  has at  least one
+    FireWire  port   then  `fw0`  should   be  printed.   Additional
+    ports/devices  will take  the  form fw<n>.   If  no devices  are
+    listed then it is likely that the new stack is not loaded.
+
+    Instructions for loading the new stack can be found on the Linux
+    IEEE 1394 FireWire wiki:
+
+      https://ieee1394.wiki.kernel.org/index.php/Juju_Migration
+
+    In  addition  the page  also  contains  instructions for  making
+    FireWire  devices accessible to  regular (non-root)  users.  For
+    libforensic1394  to  work  correctly  access  to  all  nodes  is
+    required.
+
+  Mac OS X
+
+    Mac  OS  X 10.5  (“Leopard”)  or  newer  running on  a  FireWire
+    equipped Macintosh.
+
+  Windows & BSD
+
+    There  is  currently no  support  for  using libforensic1394  on
+    Windows or BSD operating systems.  It is likely that support for
+    FreeBSD will be added in  the near future.  A platform layer for
+    Windows is  less likely  on account of  there being  no standard
+    userspace API for accessing FireWire devices.
+
+Building libforensic1394
+
+  In order to build libforensic1394  a recent version of CMake (2.8 or
+  later)  is required.  After  extracting the  archive libforensic1394
+  can be built by issuing the following commands:
+
+    $ mkdir build
+    $ cd build
+    $ cmake -G"Unix Makefiles" ../
+    $ make
+
+  (Alternatively it  is also possible  to use CMake to  generate build
+  files  for   other  development  environments  such   as  XCode  and
+  Eclipse/CDT.   Please consult  the CMake  documentation  for further
+  information.)
+
+  Installing directly
+
+    Once built libforensic1394 can be installed by executing:
+
+      $ sudo make install
+
+    Users on operating  systems which use `su` as  opposed to `sudo`
+    should  issue the  above  command as  root.   On some  GNU/Linux
+    systems it may be  necessary to execute `ldconfig` afterwards to
+    regenerate the shared library cache.
+
+  Installing through a package manager
+
+    An alternative to installing  libforensic1394 directly is to use
+    a  binary package  produced by  CPack, which  is a  component of
+    CMake.   Supported  package formats  include  .tae.gz, .deb  and
+    .rpm.  Using one of these packages in combination with a package
+    manager is the recommended way to install libforensic1394.
+
+    Building a package  is as simple issuing:
+
+      $ make package
+
+    After  building  the  project.   This will  produce  the  binary
+    packages relevant to the system (.tar.gz on all systems, .deb if
+    `dpkg` is  available and .rpm if `rpmbuild`  is available).  The
+    appropriate  package can  then  be installed  using the  systems
+    package manager.
+
+Python Bindings
+
+  Python language  bindings are provided in the  python/ directory and
+  are  compatible with  all versions  of Python  since  2.5 (including
+  Python 3).   The bindings themselves are written  entirely in Python
+  and interface with libforensic1394 using the ctypes package.
+
+  The bindings can be installed,  either locally or system wide, using
+  the `setup.py` file  in the python/ directory.  As  the setup script
+  is  merely   a  frontend  to  the   Python  Distributions  Utilities
+  (`distutils`) module  it is  worth consulting its  documentation for
+  further information.
+
+Known Bugs & Limitations
+
+  Under Linux/Juju it is often necessary to sleep for ~2 seconds after
+  either enabling SBP-2  (via `forensic1394_enable_sbp2`) or inserting
+  a device  before attempting  to read/write to  it.  This  is because
+  some operating systems, such as  Microsoft Windows, take a couple of
+  seconds to bring  down the physical DMA filter in  response to a bus
+  reset.
+
+  While  there   are  provisions   in  the  SBP-2   specification  for
+  determining if a device is  ready for read/write access a limitation
+  in  current (pre  2.6.36)  kernels prevents  this  from being  used.
+  Support for this will  be integrated when 2.6.36 becomes mainstream.
+  More information can be found on the Linux 1394 user list:
+
+    http://marc.info/?l=linux1394-user&m=127939443911403&w=2
+    http://article.gmane.org/gmane.linux.kernel.firewire.user/3972
+      [Mirror]
+
+  On  Mac  OS   X/IOKit  there  are  some  issues   with  getting  the
+  Configuration  Status  ROM  which   can  result  in  the  ROM  being
+  truncated.  The cause  of this is currently unknown;  however, it is
+  observed in other FireWire applications (such as IORegistryExplorer)
+  and hence is believed to be an IOKit problem.
+
+Special Thanks
+
+  I am  greatly indebted to Stefan  Richter for the  assistance he has
+  provided to me (and others!) on the Linux 1394 user list.
