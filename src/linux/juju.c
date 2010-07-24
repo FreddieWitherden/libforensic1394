@@ -382,8 +382,8 @@ forensic1394_dev *alloc_dev(const char *devpath,
     return dev;
 }
 
-void read_fw_sysfs_prop(const char* devpath, const char* prop,
-                        char* contents, size_t maxb)
+void read_fw_sysfs_prop(const char *devpath, const char *prop,
+                        char *contents, size_t maxb)
 {
     /*
      * The sysfs properties reside in /sys/bus/firewire/devices/fw<n>/<prop>;
