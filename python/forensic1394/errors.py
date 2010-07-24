@@ -48,5 +48,7 @@ def process_result(result, fn, args):
         return result
     elif result is ResultCode.BusReset:
         raise Forensic1394BusReset(fn.__name__ + ": A bus reset has occured")
+    elif result is ResultCode.NoPerm:
+        raise IOError(fn.__name__ + ": Permission denied")
     else:
         raise IOError(fn.__name__)
