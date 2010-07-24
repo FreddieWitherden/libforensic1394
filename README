@@ -19,40 +19,39 @@ Runtime Requirements
 
   GNU/Linux
 
-    A recent  version of  Linux running a  2.6.22 kernel  (or later)
-    with the  ‘Juju’ stack compiled either  into the kernel  or as a
-    loadable module. Presence of the  new stack can be determined by
-    analysing the output of:
+    A recent version of Linux  running a 2.6.22 kernel (or later) with
+    the ‘Juju’ stack compiled either  into the kernel or as a loadable
+    module. Presence of  the new stack can be  determined by analysing
+    the output of:
 
       $ ls /dev | grep fw
 
-    If  the new  stack is  loaded and  the system  has at  least one
-    FireWire  port   then  `fw0`  should   be  printed.   Additional
-    ports/devices  will take  the  form fw<n>.   If  no devices  are
-    listed then it is likely that the new stack is not loaded.
+    If  the new  stack  is loaded  and  the system  has  at least  one
+    FireWire   port  then   `fw0`  should   be   printed.   Additional
+    ports/devices will take the form  fw<n>.  If no devices are listed
+    then it is likely that the new stack is not loaded.
 
-    Instructions for loading the new stack can be found on the Linux
+    Instructions for loading  the new stack can be  found on the Linux
     IEEE 1394 FireWire wiki:
 
       https://ieee1394.wiki.kernel.org/index.php/Juju_Migration
 
-    In  addition  the page  also  contains  instructions for  making
-    FireWire  devices accessible to  regular (non-root)  users.  For
-    libforensic1394  to  work  correctly  access  to  all  nodes  is
-    required.
+    In  addition  the  page  also  contains  instructions  for  making
+    FireWire  devices  accessible to  regular  (non-root) users.   For
+    libforensic1394 to work correctly access to all nodes is required.
 
   Mac OS X
 
-    Mac  OS  X 10.5  (“Leopard”)  or  newer  running on  a  FireWire
-    equipped Macintosh.
+    Mac OS X 10.5 (“Leopard”)  or newer running on a FireWire equipped
+    Macintosh.
 
   Windows & BSD
 
-    There  is  currently no  support  for  using libforensic1394  on
-    Windows or BSD operating systems.  It is likely that support for
-    FreeBSD will be added in  the near future.  A platform layer for
-    Windows is  less likely  on account of  there being  no standard
-    userspace API for accessing FireWire devices.
+    There is currently no support for using libforensic1394 on Windows
+    or BSD operating  systems.  It is likely that  support for FreeBSD
+    will be added in the near future.  A platform layer for Windows is
+    less likely  on account of  there being no standard  userspace API
+    for accessing FireWire devices.
 
 Building libforensic1394
 
@@ -76,28 +75,27 @@ Building libforensic1394
 
       $ sudo make install
 
-    Users on operating  systems which use `su` as  opposed to `sudo`
-    should  issue the  above  command as  root.   On some  GNU/Linux
-    systems it may be  necessary to execute `ldconfig` afterwards to
-    regenerate the shared library cache.
+    Users on  operating systems  which use `su`  as opposed  to `sudo`
+    should issue the above command as root.  On some GNU/Linux systems
+    it may be necessary to execute `ldconfig` afterwards to regenerate
+    the shared library cache.
 
   Installing through a package manager
 
-    An alternative to installing  libforensic1394 directly is to use
-    a  binary package  produced by  CPack, which  is a  component of
-    CMake.   Supported  package formats  include  .tae.gz, .deb  and
-    .rpm.  Using one of these packages in combination with a package
-    manager is the recommended way to install libforensic1394.
+    An alternative to installing  libforensic1394 directly is to use a
+    binary package produced  by CPack, which is a  component of CMake.
+    Supported package  formats include .tae.gz, .deb  and .rpm.  Using
+    one of these packages in combination with a package manager is the
+    recommended way to install libforensic1394.
 
     Building a package  is as simple issuing:
 
       $ make package
 
-    After  building  the  project.   This will  produce  the  binary
-    packages relevant to the system (.tar.gz on all systems, .deb if
-    `dpkg` is  available and .rpm if `rpmbuild`  is available).  The
-    appropriate  package can  then  be installed  using the  systems
-    package manager.
+    After building the project.  This will produce the binary packages
+    relevant to the system (.tar.gz  on all systems, .deb if `dpkg` is
+    available and  .rpm if `rpmbuild` is  available).  The appropriate
+    package can then be installed using the systems package manager.
 
 Python Bindings
 
