@@ -109,7 +109,13 @@ forensic1394_result platform_enable_sbp2(forensic1394_bus *bus,
                                          const uint32_t *sbp2dir, size_t len)
 {
     int i;
+    int perm_skipped = 0;
+
+    forensic1394_result ret = FORENSIC1394_RESULT_SUCCESS;
+
     glob_t globdev;
+
+    assert(bus->pbus->sbp2_fd == -1);
 
     // In order to enable SBP-2 we first need a local node
     glob("/dev/fw*", 0, NULL, &globdev);
@@ -125,6 +131,12 @@ forensic1394_result platform_enable_sbp2(forensic1394_bus *bus,
         // Ensure the device was opened
         if (fd == -1)
         {
+            // Make a note if the problem is permission related
+            if (errno == EACCES)
+            {
+                perm_skipped++;
+            }
+
             // Not fatal; continue
             continue;
         }
@@ -136,24 +148,13 @@ forensic1394_result platform_enable_sbp2(forensic1394_bus *bus,
         // Send the request (really should not fail)
         if (ioctl(fd, FW_CDEV_IOC_GET_INFO, &get_info) == -1)
         {
-            perror("Get info ioctl");
+            continue;
         }
 
-        // See if the node is local
+        // See if the node is local to the system
         if (reset.node_id == reset.local_node_id)
         {
-            struct fw_cdev_add_descriptor add_desc = {};
-
-            add_desc.data   = PTR_TO_U64(sbp2dir);
-            add_desc.length = len;
-            add_desc.key    = (CSR_DIRECTORY | CSR_UNIT) << 24;
-
-            if (ioctl(fd, FW_CDEV_IOC_ADD_DESCRIPTOR, &add_desc) == -1)
-            {
-                return FORENSIC1394_RESULT_IO_ERROR;
-            }
-
-            // We're done, save the fd and break (ensuring not to close the fd)
+            // We've found what we need; save and break (but do not close)
             bus->pbus->sbp2_fd = fd;
             break;
         }
@@ -164,15 +165,36 @@ forensic1394_result platform_enable_sbp2(forensic1394_bus *bus,
 
     globfree(&globdev);
 
-    // Successful if we have a valid fd
+    // If we got a valid local file descriptor use it to update the CSR
     if (bus->pbus->sbp2_fd != -1)
     {
-        return FORENSIC1394_RESULT_SUCCESS;
+        struct fw_cdev_add_descriptor add_desc = {};
+
+        add_desc.data   = PTR_TO_U64(sbp2dir);
+        add_desc.length = len;
+        add_desc.key    = (CSR_DIRECTORY | CSR_UNIT) << 24;
+
+        // Attempt to add the SBP-2 unit directory
+        if (ioctl(bus->pbus->sbp2_fd, FW_CDEV_IOC_ADD_DESCRIPTOR, &add_desc) == -1)
+        {
+            close(bus->pbus->sbp2_fd);
+            bus->pbus->sbp2_fd = -1;
+
+            ret = FORENSIC1394_RESULT_IO_ERROR;
+        }
     }
+    // We didn't get a valid descriptor and were forced to skip some devices
+    else if (perm_skipped > 0)
+    {
+        ret = FORENSIC1394_RESULT_NO_PERM;
+    }
+    // Something else is awry
     else
     {
-        return FORENSIC1394_RESULT_IO_ERROR;
+        ret = FORENSIC1394_RESULT_IO_ERROR;
     }
+
+    return ret;
 }
 
 forensic1394_result platform_update_device_list(forensic1394_bus *bus)
