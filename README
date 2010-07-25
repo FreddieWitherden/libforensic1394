@@ -40,6 +40,16 @@ Runtime Requirements
     FireWire  devices  accessible to  regular  (non-root) users.   For
     libforensic1394 to work correctly access to all nodes is required.
 
+    In the  relatively common case where  both the old  and new stacks
+    are compiled  as loadable modules the  new stack can  be loaded as
+    follows:
+
+      $ sudo modprobe -r ohci1394 sbp2 eth1394 dv1394 raw1394 video1394
+      $ sudo modprobe firewire-ohci
+
+    The  first command  removes the  old stack  (if loaded)  while the
+    second loads the new stack.
+
   Mac OS X
 
     Mac OS X 10.5 (“Leopard”)  or newer running on a FireWire equipped
