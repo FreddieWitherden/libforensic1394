@@ -33,7 +33,8 @@ from forensic1394.functions import forensic1394_open_device, \
                                    forensic1394_get_device_product_name, \
                                    forensic1394_get_device_product_id, \
                                    forensic1394_get_device_vendor_name, \
-                                   forensic1394_get_device_vendor_id
+                                   forensic1394_get_device_vendor_id, \
+                                   forensic1394_get_device_request_size
 
 def checkStale(f):
     def newf(self, *args, **kwargs):
@@ -68,6 +69,8 @@ class Device(object):
 
         self.vendor_name = forensic1394_get_device_vendor_name(self)
         self.vendor_id = forensic1394_get_device_vendor_id(self)
+
+        self.request_size = forensic1394_get_device_request_size(self)
 
         self.csr = (c_uint32 * 256)()
         forensic1394_get_device_csr(self, self.csr)

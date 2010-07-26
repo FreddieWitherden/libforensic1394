@@ -311,10 +311,9 @@ forensic1394_is_device_open(forensic1394_dev *dev);
  *  are copied inton \a buf.
  *
  * It is worth noting that many devices impose a limit on the maximum transfer
- *  size.  This limit can be obtained by parsing the CSR, however, it is usually
- *  at least 2048-bytes in size.  As there is currently not support for
- *  parsing the CSR an heuristic algorithm is used to determine if the transfer
- *  size is at fault.
+ *  size.  This limit can be obtained by calling
+ *  \a forensic1394_get_device_request_size and is usually around 2048-bytes in
+ *  size.
  *
  *   \param dev The device to read from.
  *   \param addr The memory address to start reading from.
@@ -322,6 +321,8 @@ forensic1394_is_device_open(forensic1394_dev *dev);
  *   \param[out] buf The buffer to copy the read bytes into; must be at least
  *                   \a len bytes in size.
  *  \return A result status code.
+ *
+ * \sa forensic1394_get_device_request_size
  */
 FORENSIC1394_DECL forensic1394_result
 forensic1394_read_device(forensic1394_dev *dev,
@@ -437,6 +438,22 @@ forensic1394_get_device_vendor_name(forensic1394_dev *dev);
  */
 FORENSIC1394_DECL int
 forensic1394_get_device_vendor_id(forensic1394_dev *dev);
+
+/**
+ * \brief Returns the maximum request size supported by the device.
+ *
+ * Parses the configuration status ROM for the device and extracts the maximum
+ *  supported request size (usually 2048-bytes).  This value should be taken as
+ *  an upper-bound for the length of read/write calls.  If a size can not be
+ *  found in the CSR then 512-bytes will be returned.
+ *
+ * The returned size is guaranteed to be a positive power of two.
+ *
+ *  \param dev The device.
+ * \return The maximum request size in bytes.
+ */
+FORENSIC1394_DECL int
+forensic1394_get_device_request_size(forensic1394_dev *dev);
 
 /**
  * \brief Fetches the user data for the device \a dev.

@@ -150,3 +150,9 @@ forensic1394_get_device_vendor_name.restype = c_char_p
 forensic1394_get_device_vendor_id = lib.forensic1394_get_device_vendor_id
 forensic1394_get_device_vendor_id.argtypes = [devptr]
 forensic1394_get_device_vendor_id.restype = c_int
+
+# Wrap the maximum request size function
+# C def: int forensic1394_get_device_request_size(forensic1394_dev *dev);
+forensic1394_get_device_request_size  = lib.forensic1394_get_device_request_size
+forensic1394_get_device_request_size.argtypes = [devptr]
+forensic1394_get_device_request_size.restype = c_int
