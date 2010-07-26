@@ -18,6 +18,13 @@
 */
 
 /**
+ * \file forensic1394.h
+ *
+ * Main header file for libforensic1394 which provides prototypes for all public
+ *  structures/methods.
+ */
+
+/**
  * \mainpage libforensic1394
  *
  * The latest version of libforensic1394 can be found at:
