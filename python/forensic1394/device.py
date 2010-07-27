@@ -18,7 +18,7 @@
 #  <http://www.gnu.org/licenses/>.                                          #
 #############################################################################
 
-from ctypes import create_string_buffer, c_size_t, c_uint32
+from ctypes import create_string_buffer, byref, c_size_t, c_uint32
 
 from forensic1394.errors import process_result, Forensic1394StaleHandle
 
@@ -103,15 +103,22 @@ class Device(object):
     def read(self, addr, numb):
         """
         Attempts to read numb bytes from the device starting at addr.  The
-        device must be open and the handle can not be stale.  The resulting data
-        is returned.  An exception is raised should an errors occur.
+        device must be open and the handle can not be stale.  Requests larger
+        than self.request_size will automatically be broken down into smaller
+        chunks.  The resulting data is returned.  An exception is raised should
+        an errors occur.
         """
         assert self.isopen()
 
         # Allocate a buffer for the data
         b = create_string_buffer(numb)
 
-        forensic1394_read_device(self, addr, numb, b)
+        # Break the request up into request_size chunks
+        for off in range(0, numb, self._request_size):
+            # Last chunk is a special case (numb - off)
+            n = min(numb - off, self._request_size)
+
+            forensic1394_read_device(self, addr + off, n, byref(b, off))
 
         return b.raw
 
@@ -119,14 +126,19 @@ class Device(object):
     def write(self, addr, buf):
         """
         Attempts to write len(buf) bytes to the device starting at addr.  The
-        device must be open and the handle can not be stale.  As this call
-        translates directly to a raw I/O request it is important to break the
-        buffer up into chunks no larger than the maximum request size (usually
-        >= 2048-bytes) determined from parsing the CSR.
+        device must be open and the handle can not be stale.  Requests larger
+        than self.request_size will automatically be broken down into smaller
+        chunks.
         """
         assert self.isopen()
 
-        forensic1394_write_device(self, addr, len(buf), buf)
+        numb = len(buf)
+
+        # Break up the request
+        for off in range(0, numb, self._request_size):
+            n = min(numb - off, self._request_size)
+
+            forensic1394_write_device(self, addr + off, n, buf[off:off + n])
 
     @property
     def nodeid(self):

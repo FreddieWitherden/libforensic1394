@@ -96,7 +96,7 @@ forensic1394_is_device_open.restype = c_int
 #                                                     uint64_t addr,
 #                                                     size_t len, void *buf)
 forensic1394_read_device = lib.forensic1394_read_device
-forensic1394_read_device.argtypes = [devptr, c_uint64, c_size_t, POINTER(c_char)]
+forensic1394_read_device.argtypes = [devptr, c_uint64, c_size_t, c_void_p]
 forensic1394_read_device.restype = c_int
 forensic1394_read_device.errcheck = process_result
 
