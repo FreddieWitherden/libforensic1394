@@ -60,20 +60,20 @@ class Device(object):
         # We are not stale
         self._stale = False
 
-        # Copy over static attributes
-        self.nodeid = forensic1394_get_device_nodeid(self)
-        self.guid = forensic1394_get_device_guid(self)
+        # Copy over the device properties
+        self._nodeid = forensic1394_get_device_nodeid(self)
+        self._guid = forensic1394_get_device_guid(self)
 
-        self.product_name = forensic1394_get_device_product_name(self)
-        self.product_id = forensic1394_get_device_product_id(self)
+        self._product_name = forensic1394_get_device_product_name(self)
+        self._product_id = forensic1394_get_device_product_id(self)
 
-        self.vendor_name = forensic1394_get_device_vendor_name(self)
-        self.vendor_id = forensic1394_get_device_vendor_id(self)
+        self._vendor_name = forensic1394_get_device_vendor_name(self)
+        self._vendor_id = forensic1394_get_device_vendor_id(self)
 
-        self.request_size = forensic1394_get_device_request_size(self)
+        self._request_size = forensic1394_get_device_request_size(self)
 
-        self.csr = (c_uint32 * 256)()
-        forensic1394_get_device_csr(self, self.csr)
+        self._csr = (c_uint32 * 256)()
+        forensic1394_get_device_csr(self, self._csr)
 
     def __del__(self):
         if self.isopen():
@@ -127,3 +127,61 @@ class Device(object):
         assert self.isopen()
 
         forensic1394_write_device(self, addr, len(buf), buf)
+
+    @property
+    def nodeid(self):
+        """
+        The node ID of the device on the bus.
+        """
+        return self._nodeid
+
+    @property
+    def guid(self):
+        """
+        The 48-bit GUID of the device.
+        """
+        return self._guid
+
+    @property
+    def product_name(self):
+        """
+        The product name of the device; may be ''.
+        """
+        return self._product_name
+
+    @property
+    def product_id(self):
+        """
+        The product id of the device; integer.
+        """
+        return self._product_id
+
+    @property
+    def vendor_name(self):
+        """
+        The vendor name of the device; may be ''.
+        """
+        return self._vendor_name
+
+    @property
+    def vendor_id(self):
+        """
+        The vendor id of the device; integer.
+        """
+        return self._vendor_id
+
+    @property
+    def request_size(self):
+        """
+        The maximum request size supported by the device in bytes; this is
+        always a power of two.
+        """
+        return self._request_size
+
+    @property
+    def csr(self):
+        """
+        Configuration status ROM for the device, list of 32-bit host-endian
+        integers.
+        """
+        return self._csr
