@@ -89,15 +89,20 @@ class Device(object):
 
     def close(self):
         """
-        Closes the device.
+        Closes the device.  If the device is stale this is a no-op
         """
-        forensic1394_close_device(self)
+        if not self._stale:
+            forensic1394_close_device(self)
 
     def isopen(self):
         """
         Checks to see if the device is open or not, returning a boolean value.
+        In the case of a stale handle False is returned.
         """
-        return bool(forensic1394_is_device_open(self))
+        if self._stale:
+            return False
+        else:
+            return bool(forensic1394_is_device_open(self))
 
     @checkStale
     def read(self, addr, numb):
