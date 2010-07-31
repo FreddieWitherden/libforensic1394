@@ -145,6 +145,30 @@ Known Bugs & Limitations
   observed in other FireWire applications (such as IORegistryExplorer)
   and hence is believed to be an IOKit problem.
 
+  When connecting  a Mac OS X  host to an unlocked  Windows target the
+  “New  Hardware  Wizard”  may  appear.   This is  because  Mac  OS  X
+  advertises support for IPv6 over  1394 (RFC 3146) — a protocol which
+  Windows does  not recognise.  This  manifests itself as  an “Unknown
+  Device” in  the device  manager with a  hardware ID  of `1394\5E&2`.
+  Although  not  harmful   (libforensic1394  will  still  function  as
+  expected) it is something of  a nuisance.  One workaround to this is
+  to unload the `IOFireWireIP.kext` kernel module to prevent OS X from
+  advertising support for IPv[4,6] over 1394:
+
+    $ sudo kextunload /System/Library/Extensions/IOFireWireIP.kext
+
+  It  is  important  to  run  this before  any  FireWire  devices  are
+  connected to the system.  Connecting  a device will cause the retain
+  count  for the  module to  be  incremented; making  it difficult  to
+  unload the module until the  system is restarted.  If later required
+  the module can be reloaded by issuing:
+
+    $ sudo kextload /System/Library/Extensions/IOFireWireIP.kext
+
+  As Linux/Juju only  supports IPv4 over 1394 it  is unaffected.  (All
+  recent Windows versions either support IPv4 over 1394 or are capable
+  of filtering it from the device list.)
+
 Special Thanks
 
   I am  greatly indebted to Stefan  Richter for the  assistance he has
