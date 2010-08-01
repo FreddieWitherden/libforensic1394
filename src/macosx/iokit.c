@@ -237,13 +237,16 @@ forensic1394_result platform_update_device_list(forensic1394_bus *bus)
     io_object_t currdev;
 
     IOReturn iret;
-    forensic1394_result fret;
+    forensic1394_result fret = FORENSIC1394_RESULT_SUCCESS;
 
     // We need to get the systems local device node to update the CSR
     matchingDict = IOServiceMatching("IOFireWireDevice");
     iret = IOServiceGetMatchingServices(kIOMasterPortDefault,
                                         matchingDict,
                                         &iterator);
+
+    require_assertion(iret == kIOReturnSuccess, cleanupMatchingServices,
+                      fret, FORENSIC1394_RESULT_OTHER_ERROR);
 
     while ((currdev = IOIteratorNext(iterator)))
     {
@@ -346,6 +349,7 @@ forensic1394_result platform_update_device_list(forensic1394_bus *bus)
     // Release the iterator
     IOObjectRelease(iterator);
 
+cleanupMatchingServices:
     return fret;
 }
 
