@@ -38,8 +38,8 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 // The kernel ioctl structures store pointers as 64-bit integers
-#define PTR_TO_U64(p) ((__u64)(p))
-#define U64_TO_PTR(p) ((void *)(p))
+#define PTR_TO_U64(p) ((__u64)(intptr_t)(p))
+#define U64_TO_PTR(p) ((void *)(intptr_t)(p))
 
 /*
  * These constants come from linux/drivers/firewire/fw-device.h and are used
@@ -314,7 +314,7 @@ void platform_close_device(forensic1394_dev *dev)
 
 forensic1394_result platform_read_device(forensic1394_dev *dev,
                                          uint64_t addr,
-                                         uint64_t len,
+                                         size_t len,
                                          void *buf)
 {
     int tcode = (len == 4) ? TCODE_READ_QUADLET_REQUEST
