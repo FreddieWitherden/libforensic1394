@@ -141,8 +141,7 @@ forensic1394_result forensic1394_enable_sbp2(forensic1394_bus *bus)
         return 1;
     }
 
-    ret = platform_enable_sbp2(bus, sbp2_unit_dir,
-                               ARRAY_E(sbp2_unit_dir));
+    ret = platform_enable_sbp2(bus, sbp2_unit_dir, ARRAY_E(sbp2_unit_dir));
 
     // If successful mark SBP-2 as being enabled
     if (ret == FORENSIC1394_RESULT_SUCCESS)

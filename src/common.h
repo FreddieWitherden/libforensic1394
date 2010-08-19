@@ -90,10 +90,10 @@ void platform_close_device(forensic1394_dev *dev);
 
 forensic1394_result platform_read_device_v(forensic1394_dev *dev,
                                            forensic1394_req *req,
-					   size_t nreq);
+                                           size_t nreq);
 
 forensic1394_result platform_write_device_v(forensic1394_dev *dev,
-					    const forensic1394_req *req,
-				            size_t nreq);
+                                            const forensic1394_req *req,
+                                            size_t nreq);
 
 #endif // FORENSIC1394_COMMON_H

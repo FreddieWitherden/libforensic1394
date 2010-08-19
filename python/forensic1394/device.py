@@ -115,8 +115,6 @@ class Device(object):
         # Create the request buffer
         buf = create_string_buffer(sum(numb for _addr, numb in req))
 
-        #print "%d" % (sum(numb for _addr, numb in req))
-
         # Get a pointer directly into the buffer which we can perform
         # arithmetic on. Compared to cast(byref(buf, off), c_void_p)
         # directly accessing the pointer gives a ~10% performance

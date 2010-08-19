@@ -27,13 +27,13 @@
 
 /**
  * The number of read commands to allocate per device; these are used
- * to submit asynchronous read requests.
+ *  to submit asynchronous read requests.
  */
 #define FORENSIC1394_NUM_READ_CMD 4
 
 /**
  * The number of write commands to allocate per device; these are used
- * to submit asynchronous write requests.
+ *  to submit asynchronous write requests.
  */
 #define FORENSIC1394_NUM_WRITE_CMD 1
 
