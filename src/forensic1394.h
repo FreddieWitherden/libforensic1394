@@ -109,6 +109,28 @@ typedef struct _forensic1394_bus forensic1394_bus;
 typedef struct _forensic1394_dev forensic1394_dev;
 
 /**
+ * \brief A request structure used for making batch read/write requests.
+ *
+ * For use with the batch APIs (suffixed by _v) requests allow
+ * forensic1394 to take advantage of the asynchronous capabilities of
+ * FireWire stacks in order to improve performance.
+ *
+ * \sa forensic1394_read_device_v
+ * \sa forensic1394_write_device_v
+ */
+typedef struct _forensic1394_req
+{
+    /// The address to read/write
+    uint64_t    addr;
+
+    /// Length of the buffer in bytes
+    size_t      len;
+
+    /// Data buffer
+    void        *buf;
+} forensic1394_req;
+
+/**
  * \brief Number of uint32 elements required to store a device ROM.
  *
  * A FireWire configuration status ROM (`csr') is made up of unsigned 32-bit
@@ -315,12 +337,14 @@ forensic1394_is_device_open(forensic1394_dev *dev);
  *
  * Performs a blocking (synchronous) read on the device \a dev, starting at the
  *  address \a addr and attempting to read \a len bytes.  The resulting bytes
- *  are copied inton \a buf.
+ *  are copied into \a buf.
  *
  * It is worth noting that many devices impose a limit on the maximum transfer
  *  size.  This limit can be obtained by calling
  *  \a forensic1394_get_device_request_size and is usually around 2048-bytes in
  *  size.
+ *
+ * This method is a convenience wrapper around \c forensic1394_read_device_v.
  *
  *   \param dev The device to read from.
  *   \param addr The memory address to start reading from.
@@ -330,6 +354,7 @@ forensic1394_is_device_open(forensic1394_dev *dev);
  *  \return A result status code.
  *
  * \sa forensic1394_get_device_request_size
+ * \sa forensic1394_read_device_v
  */
 FORENSIC1394_DECL forensic1394_result
 forensic1394_read_device(forensic1394_dev *dev,
@@ -338,12 +363,39 @@ forensic1394_read_device(forensic1394_dev *dev,
                          void *buf);
 
 /**
+ * \brief Reads each request specified in \a req from \a dev asynchronously.
+ *
+ * Vectorised, scatter input, read method.  By issuing requests asynchronously
+ *  this function is often able to offer better performance than a series of
+ *  \c forensic1394_read_device calls.  The performance gains, if any, depend
+ *  heavily on the capabilities of the backend.
+ *
+ * Each request must be no larger than \c forensic1394_get_device_request_size
+ *  bytes.  If any of the data buffers in \a req overlap then the behaviour
+ *  is undefined.
+ *
+ * The method will return early should one of the requests fail.  It is not
+ *  currently possible to determine which request caused the error.
+ *
+ *   \param dev The device to read from.
+ *   \param req The read requests to service.
+ *   \param nreq The number of requests in \a req.
+ *  \return A result status code.
+ */
+FORENSIC1394_DECL forensic1394_result
+forensic1394_read_device_v(forensic1394_dev *dev,
+                           forensic1394_req *req,
+                           size_t nreq);
+
+/**
  * \brief Writes \a len bytes from \a buf to \a dev starting at \a addr.
  *
  * Performs a blocking (synchronous) write on the device \a dev attempting to
  *  copy \a len bytes from \a buf to the device address \a addr.  See
- *  the documentation for \a forensic1394_read_device for a discussion on the
+ *  the documentation for \c forensic1394_read_device for a discussion on the
  *  maximum transfer size.
+ *
+ * This method is a convenience wrapper around \c forensic1394_write_device_v.
  *
  *   \param dev The device to write to.
  *   \param addr The memory address to start writing to.
@@ -356,6 +408,23 @@ forensic1394_write_device(forensic1394_dev *dev,
                           uint64_t addr,
                           size_t len,
                           void *buf);
+
+/**
+ * \brief Writes each request specified in \a req to \a dev asynchronously.
+ *
+ * The vectorised, gather output, write method.  Depending on the backend this
+ *  method may issue the requests in \a req asynchronously in order to improve
+ *  performance.  See \c forensic1394_read_device_v for further discussion.
+ *
+ *   \param dev The device to write to.
+ *   \param[in] req The write requests to service.
+ *   \param nreq The number of requests in \a req.
+ *  \return A result status code.
+ */
+FORENSIC1394_DECL forensic1394_result
+forensic1394_write_device_v(forensic1394_dev *dev,
+			    const forensic1394_req *req,
+			    size_t nreq);
 
 /**
  * \brief Copies the configuration ROM for the device \a dev into \a rom.

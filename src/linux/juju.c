@@ -34,6 +34,8 @@
 
 #include <glob.h>
 
+#include <poll.h>
+
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
@@ -47,6 +49,19 @@
  */
 #define CSR_DIRECTORY   0xc0
 #define CSR_UNIT        0x11
+
+/**
+ * The size of the request pipeline.  This determines how many asynchronous
+ *  requests can be in the pipeline at any one time.  Due to serious bugs in
+ *  current kernels (at least up to 2.6.35) this is currently limited to 1.
+ */
+#define REQUEST_PIPELINE_SZ 1
+
+typedef enum
+{
+    REQUEST_TYPE_READ,
+    REQUEST_TYPE_WRITE
+} request_type;
 
 struct _platform_bus
 {
@@ -77,11 +92,21 @@ static forensic1394_dev *alloc_dev(const char *devpath,
 static void read_fw_sysfs_prop(const char *devpath, const char *prop,
                                char *contents, size_t maxb);
 
-static forensic1394_result send_request(forensic1394_dev *dev,
-                                        int tcode,
-                                        uint64_t addr,
-                                        size_t inlen, void *in,
-                                        size_t outlen, void *out);
+/**
+ * Returns the most suitable TCODE for a given request.  Requests with a length
+ *  of 4-bytes should be QUADLET requests while everything else should use
+ *  BLOCK requests.
+ */
+static inline int request_tcode(const forensic1394_req* r, request_type t);
+
+/**
+ * Generic request-issuing function which can be used to make either read/write
+ *  requests depending on the value of \a t.
+ */
+static forensic1394_result send_requests(forensic1394_dev *dev,
+                                         request_type t,
+                                         const forensic1394_req *req,
+                                         size_t nreq);
 
 platform_bus *platform_bus_alloc(void)
 {
@@ -312,26 +337,18 @@ void platform_close_device(forensic1394_dev *dev)
     close(dev->pdev->fd);
 }
 
-forensic1394_result platform_read_device(forensic1394_dev *dev,
-                                         uint64_t addr,
-                                         size_t len,
-                                         void *buf)
+forensic1394_result platform_read_device_v(forensic1394_dev *dev,
+                                           forensic1394_req *req,
+                                           size_t nreq)
 {
-    int tcode = (len == 4) ? TCODE_READ_QUADLET_REQUEST
-                           : TCODE_READ_BLOCK_REQUEST;
-
-    return send_request(dev, tcode, addr, 0, NULL, len, buf);
+    return send_requests(dev, REQUEST_TYPE_READ, req, nreq);
 }
 
-forensic1394_result platform_write_device(forensic1394_dev *dev,
-                                          uint64_t addr,
-                                          size_t len,
-                                          void *buf)
+forensic1394_result platform_write_device_v(forensic1394_dev *dev,
+                                            const forensic1394_req *req,
+                                            size_t nreq)
 {
-    int tcode = (len == 4) ? TCODE_WRITE_QUADLET_REQUEST
-                           : TCODE_WRITE_BLOCK_REQUEST;
-
-    return send_request(dev, tcode, addr, len, buf, 0, NULL);
+    return send_requests(dev, REQUEST_TYPE_WRITE, req, nreq);
 }
 
 forensic1394_dev *alloc_dev(const char *devpath,
@@ -424,80 +441,124 @@ void read_fw_sysfs_prop(const char *devpath, const char *prop,
     close(fd);
 }
 
-forensic1394_result send_request(forensic1394_dev *dev,
-                                 int tcode,
-                                 uint64_t addr,
-                                 size_t inlen, void *in,
-                                 size_t outlen, void *out)
+static int request_tcode(const forensic1394_req *r, request_type t)
 {
-    struct fw_cdev_send_request request = {};
-    ssize_t response_len;
-
-    // Fill out the request structure
-    request.tcode       = tcode;
-    request.length      = MAX(inlen, outlen);
-    request.offset      = addr;
-    request.data        = PTR_TO_U64(in);
-    request.closure     = 0;
-    request.generation  = dev->generation;
-
-    // Make the request
-    if (ioctl(dev->pdev->fd, FW_CDEV_IOC_SEND_REQUEST, &request) == -1)
+    if (t == REQUEST_TYPE_READ)
     {
-        // EIO errors are usually because of bad request sizes
-        return (errno == EIO) ? FORENSIC1394_RESULT_IO_SIZE
-                              : FORENSIC1394_RESULT_IO_ERROR;
+        return (r->len == 4) ? TCODE_READ_QUADLET_REQUEST
+                             : TCODE_READ_BLOCK_REQUEST;
     }
-
-    // Keep going until we get a response
-    while (1)
+    else
     {
-        char buffer[16 * 1024];
-        union fw_cdev_event *event = (void *) buffer;
+        return (r->len == 4) ? TCODE_WRITE_QUADLET_REQUEST
+                             : TCODE_WRITE_BLOCK_REQUEST;
+    }
+}
 
-        // Read an event from the device; blocking if need be
-        response_len = read(dev->pdev->fd, buffer, 16*1024);
+forensic1394_result send_requests(forensic1394_dev *dev, request_type t,
+                                  const forensic1394_req *req,
+                                  size_t nreq)
+{
+    int i = 0;
+    int in_pipeline = 0;
 
-        if (response_len != -1) switch (event->common.type)
+    struct pollfd fdp = {
+        .fd     = dev->pdev->fd,
+        .events = POLLIN
+    };
+
+    // Keep going until all requests have been sent and all responses received
+    while (i < nreq || in_pipeline > 0)
+    {
+        // Ensure the request pipeline is full
+        while (in_pipeline < REQUEST_PIPELINE_SZ && i < nreq)
         {
-            // We have a response to our request (input or output)
-            case FW_CDEV_EVENT_RESPONSE:
+            struct fw_cdev_send_request request;
+
+            // Fill out the common request structure
+            request.tcode       = request_tcode(&req[i], t);
+            request.length      = req[i].len;
+            request.offset      = req[i].addr;
+            request.data        = (t == REQUEST_TYPE_WRITE) ? PTR_TO_U64(req[i].buf)
+                                                            : 0;
+            request.closure     = i;
+            request.generation  = dev->generation;
+
+            // Make the request
+            if (ioctl(dev->pdev->fd, FW_CDEV_IOC_SEND_REQUEST, &request) == -1)
             {
-                // Check the response code
-                switch (event->response.rcode)
-                {
-                    // Request was okay; continue processing
-                    case RCODE_COMPLETE:
-                        break;
-                    case RCODE_BUSY:
-                        return FORENSIC1394_RESULT_BUSY;
-                        break;
-                    // Different generations are a consequence of bus resets
-                    case RCODE_GENERATION:
-                        return FORENSIC1394_RESULT_BUS_RESET;
-                        break;
-                    default:
-                        return FORENSIC1394_RESULT_IO_ERROR;
-                        break;
-                }
-
-                // If we are expecting some output
-                if (out && event->response.length == outlen)
-                {
-                    memcpy(out, event->response.data, outlen);
-                }
-
-                return FORENSIC1394_RESULT_SUCCESS;
-                break;
+                // EIO errors are usually because of bad request sizes
+                return (errno == EIO) ? FORENSIC1394_RESULT_IO_SIZE
+                                      : FORENSIC1394_RESULT_IO_ERROR;
             }
-            // Ignore everything else
-            default:
-                break;
+
+            i++; in_pipeline++;
         }
-        // Problem reading the response back from the device
-        else
+
+        // Wait for a response
+        poll(&fdp, 1, -1);
+
+        if (fdp.revents == POLLIN)
         {
-            return FORENSIC1394_RESULT_IO_ERROR;
+            char buffer[16 * 1024];
+            ssize_t response_len;
+            union fw_cdev_event *event = (void *) buffer;
+
+            // Read an event from the device; blocking if need be
+            response_len = read(dev->pdev->fd, buffer, 16*1024);
+
+            if (response_len != -1) switch (event->common.type)
+            {
+                // We have a response to our request (input or output)
+                case FW_CDEV_EVENT_RESPONSE:
+                {
+                    // Check the response code
+                    switch (event->response.rcode)
+                    {
+                        // Request was okay; continue processing
+                        case RCODE_COMPLETE:
+                            break;
+                        case RCODE_BUSY:
+                            return FORENSIC1394_RESULT_BUSY;
+                            break;
+                        // Different generations are a consequence of bus resets
+                        case RCODE_GENERATION:
+                            return FORENSIC1394_RESULT_BUS_RESET;
+                            break;
+                        default:
+                            return FORENSIC1394_RESULT_IO_ERROR;
+                            break;
+                    }
+
+                    // If we are expecting some data
+                    if (t == REQUEST_TYPE_READ)
+                    {
+                        // Check the lengths match (they should!)
+                        if (event->response.length == req[event->common.closure].len)
+                        {
+                            memcpy(req[event->common.closure].buf,
+                                   event->response.data, event->response.length);
+                        }
+                        else
+                        {
+                            return FORENSIC1394_RESULT_IO_ERROR;
+                        }
+                    }
+
+                    in_pipeline--;
+                    break;
+                }
+                // Ignore everything else
+                default:
+                    break;
+            }
+            // Problem reading the response back from the device
+            else
+            {
+                return FORENSIC1394_RESULT_IO_ERROR;
+            }
         }
     }
+
+    return FORENSIC1394_RESULT_SUCCESS;
 }

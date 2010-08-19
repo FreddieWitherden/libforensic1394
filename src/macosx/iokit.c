@@ -26,6 +26,18 @@
 #include <IOKit/firewire/IOFireWireLib.h>
 
 /**
+ * The number of read commands to allocate per device; these are used
+ * to submit asynchronous read requests.
+ */
+#define FORENSIC1394_NUM_READ_CMD 4
+
+/**
+ * The number of write commands to allocate per device; these are used
+ * to submit asynchronous write requests.
+ */
+#define FORENSIC1394_NUM_WRITE_CMD 1
+
+/**
  * Requires that the \c IOReturn \a ret be equal to \c kIOReturnSuccess.
  *  Otherwise the \c forensic1394_result variable \a fret is set to the
  *  appropriate error code and a \c goto jump to \a label is made.
@@ -77,6 +89,10 @@ struct _platform_dev
 {
     IOFireWireLibDeviceRef devIntrf;
     io_object_t dev;
+
+    IOFireWireLibCommandRef readcmd[FORENSIC1394_NUM_READ_CMD];
+    IOFireWireLibCommandRef writecmd[FORENSIC1394_NUM_WRITE_CMD];
+    IOReturn cmdret;
 };
 
 /**
@@ -86,6 +102,20 @@ struct _platform_dev
  *  \return The corresponding \c forensic1394_result.
  */
 static forensic1394_result convert_ioreturn(IOReturn i);
+
+/**
+ * \brief Callback handler for when read/write commands complete.
+ *
+ *   \param refcon User data.
+ *   \param ret Return code for the command.
+ */
+static void request_complete(void *refcon, IOReturn ret);
+
+static forensic1394_result send_requests(forensic1394_dev *dev,
+                                         const forensic1394_req *req,
+                                         size_t nreq,
+                                         IOFireWireLibCommandRef *cmd,
+                                         size_t ncmd);
 
 static void copy_device_property_string(io_registry_entry_t dev,
                                         CFStringRef prop,
@@ -369,58 +399,86 @@ forensic1394_result platform_open_device(forensic1394_dev *dev)
 {
     IOReturn iret;
 
+    IOFireWireLibDeviceRef intrf = dev->pdev->devIntrf;
+    io_object_t devio = dev->pdev->dev;
+
+    IOFireWireLibCommandRef *readcmd = dev->pdev->readcmd;
+    IOFireWireLibCommandRef *writecmd = dev->pdev->writecmd;
+
     // Attempt to open the device
-    iret = (*dev->pdev->devIntrf)->Open(dev->pdev->devIntrf);
+    iret = (*intrf)->Open(intrf);
+
+    if (iret == kIOReturnSuccess)
+    {
+        int i;
+        FWAddress nulladdr = { 0, 0, 0 };
+
+        // Add a custom callback mode "libforensic1394"
+        (*intrf)->AddCallbackDispatcherToRunLoopForMode(intrf,
+                                                        CFRunLoopGetCurrent(),
+                                                        CFSTR("libforensic1394"));
+
+        // Create the read command handlers
+        for (i = 0; i < FORENSIC1394_NUM_READ_CMD; i++)
+        {
+            readcmd[i] = (*intrf)->CreateReadCommand(intrf, devio,
+                                                     &nulladdr, NULL, 0,
+                                                     request_complete, false, 0,
+                                                     &dev->pdev->cmdret,
+                                                     CFUUIDGetUUIDBytes(kIOFireWireReadCommandInterfaceID_v3));
+        }
+
+        // Create the write command handler(s)
+        for (i = 0; i < FORENSIC1394_NUM_WRITE_CMD; i++)
+        {
+            writecmd[i] = (*intrf)->CreateWriteCommand(intrf, devio,
+                                                       &nulladdr, NULL, 0,
+                                                       request_complete, false, 0,
+                                                       &dev->pdev->cmdret,
+                                                       CFUUIDGetUUIDBytes(kIOFireWireWriteCommandInterfaceID_v3));
+        }
+    }
 
     return convert_ioreturn(iret);
 }
 
 void platform_close_device(forensic1394_dev *dev)
 {
+    int i;
+
+    // Release the read commands
+    for (i = 0; i < FORENSIC1394_NUM_READ_CMD; i++)
+    {
+        (*dev->pdev->readcmd[i])->Release(dev->pdev->readcmd[i]);
+    }
+
+    // Release the write commands
+    for (i = 0; i < FORENSIC1394_NUM_WRITE_CMD; i++)
+    {
+        (*dev->pdev->writecmd[i])->Release(dev->pdev->writecmd[i]);
+    }
+
+    // Remove the callback handler added in open_device
+    (*dev->pdev->devIntrf)->RemoveCallbackDispatcherFromRunLoop(dev->pdev->devIntrf);
+
+    // Finally, close the device
     (*dev->pdev->devIntrf)->Close(dev->pdev->devIntrf);
 }
 
-int platform_read_device(forensic1394_dev *dev,
-                         uint64_t addr,
-                         size_t len,
-                         void *buf)
+forensic1394_result platform_read_device_v(forensic1394_dev *dev,
+                                           forensic1394_req *req,
+                                           size_t nreq)
 {
-    FWAddress fwaddr;
-    IOReturn ret;
-    UInt32 bufsize = len;
-
-    // Decompose the address; the nodeID is handled by IOKit
-    fwaddr.nodeID       = 0;
-    fwaddr.addressHi    = addr >> 32;
-    fwaddr.addressLo    = addr & 0xffffffffULL;
-
-    // Perform the read
-    ret = (*dev->pdev->devIntrf)->Read(dev->pdev->devIntrf, dev->pdev->dev,
-                                       &fwaddr, buf, &bufsize, false, 0);
-
-
-    return convert_ioreturn(ret);
+    return send_requests(dev, req, nreq,
+                         dev->pdev->readcmd, FORENSIC1394_NUM_READ_CMD);
 }
 
-int platform_write_device(forensic1394_dev *dev,
-                          uint64_t addr,
-                          size_t len,
-                          void *buf)
+forensic1394_result platform_write_device_v(forensic1394_dev *dev,
+                                            const forensic1394_req *req,
+                                            size_t nreq)
 {
-    FWAddress fwaddr;
-    IOReturn ret;
-    UInt32 bufsize = len;
-
-    // Decompose the address
-    fwaddr.nodeID       = 0;
-    fwaddr.addressHi    = addr >> 32;
-    fwaddr.addressLo    = addr & 0xffffffffULL;
-
-    // Perform the write
-    ret = (*dev->pdev->devIntrf)->Write(dev->pdev->devIntrf, dev->pdev->dev,
-                                        &fwaddr, buf, &bufsize, false, 0);
-
-    return convert_ioreturn(ret);
+    return send_requests(dev, req, nreq,
+                         dev->pdev->writecmd, FORENSIC1394_NUM_WRITE_CMD);
 }
 
 forensic1394_result convert_ioreturn(IOReturn i)
@@ -440,6 +498,66 @@ forensic1394_result convert_ioreturn(IOReturn i)
             return FORENSIC1394_RESULT_IO_ERROR;
             break;
     }
+}
+
+void request_complete(void *ref, IOReturn result)
+{
+    // Cast ref to an IOReturn
+    IOReturn *r = ref;
+
+    *r = result;
+}
+
+forensic1394_result send_requests(forensic1394_dev *dev,
+                                  const forensic1394_req *req, size_t nreq,
+                                  IOFireWireLibCommandRef *cmd, size_t ncmd)
+{
+    forensic1394_result ret = FORENSIC1394_RESULT_SUCCESS;
+
+    int i = 0, j;
+    int inPipeline = 0;
+
+    /*
+     * We need to keep going until there are firstly no more requests to make
+     * and secondly until all requests we've made have been responded to.
+     */
+    while (i < nreq || inPipeline > 0)
+    {
+        // Send as many requests as possible
+        for (j = 0; inPipeline < ncmd && i < nreq; j++)
+        {
+            IOFireWireLibCommandRef c = cmd[j];
+
+            if (!(*c)->IsExecuting(c))
+            {
+                // Decompose the address; the nodeID is handled by IOKit
+                FWAddress fwaddr = {
+                    .nodeID     = 0,
+                    .addressHi  = req[i].addr >> 32,
+                    .addressLo  = req[i].addr & 0xffffffffULL
+                };
+
+                (*c)->SetTarget(c, &fwaddr);
+                (*c)->SetBuffer(c, req[i].len, req[i].buf);
+                (*c)->Submit(c);
+
+                i++; inPipeline++;
+            }
+        }
+
+        // Wait for a response to a request
+        CFRunLoopRunInMode(CFSTR("libforensic1394"), 1.0, true);
+        inPipeline--;
+
+        // Check the return code
+        if (dev->pdev->cmdret != kIOReturnSuccess)
+        {
+            ret = convert_ioreturn(dev->pdev->cmdret);
+            break;
+        }
+    }
+
+    return ret;
 }
 
 void copy_device_property_string(io_registry_entry_t dev,

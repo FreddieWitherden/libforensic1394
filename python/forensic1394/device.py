@@ -18,15 +18,16 @@
 #  <http://www.gnu.org/licenses/>.                                          #
 #############################################################################
 
-from ctypes import create_string_buffer, byref, c_size_t, c_uint32
+from ctypes import create_string_buffer, byref, cast, POINTER, \
+                   c_char, c_size_t, c_uint32, c_void_p
 
 from forensic1394.errors import process_result, Forensic1394StaleHandle
 
 from forensic1394.functions import forensic1394_open_device, \
                                    forensic1394_close_device, \
                                    forensic1394_is_device_open, \
-                                   forensic1394_read_device, \
-                                   forensic1394_write_device, \
+                                   forensic1394_read_device_v, \
+                                   forensic1394_write_device_v, \
                                    forensic1394_get_device_csr, \
                                    forensic1394_get_device_nodeid, \
                                    forensic1394_get_device_guid, \
@@ -34,7 +35,8 @@ from forensic1394.functions import forensic1394_open_device, \
                                    forensic1394_get_device_product_id, \
                                    forensic1394_get_device_vendor_name, \
                                    forensic1394_get_device_vendor_id, \
-                                   forensic1394_get_device_request_size
+                                   forensic1394_get_device_request_size, \
+                                   forensic1394_req
 
 def checkStale(f):
     def newf(self, *args, **kwargs):
@@ -104,6 +106,38 @@ class Device(object):
         else:
             return bool(forensic1394_is_device_open(self))
 
+    def _readreq(self, req):
+        """
+        Internal low level read function.
+        """
+        assert self.isopen()
+
+        # Create the request buffer
+        buf = create_string_buffer(sum(numb for _addr, numb in req))
+
+        #print "%d" % (sum(numb for _addr, numb in req))
+
+        # Get a pointer directly into the buffer which we can perform
+        # arithmetic on. Compared to cast(byref(buf, off), c_void_p)
+        # directly accessing the pointer gives a ~10% performance
+        # improvement for scatter requests.
+        pbuf = cast(buf, c_void_p).value
+
+        # Create the request tuples
+        init = []
+        for addr, numb in req:
+            init.append((addr, numb, c_void_p(pbuf)))
+            pbuf += numb
+
+        # Create the array of forensic1394 requests
+        creq = (forensic1394_req * len(req))(*init)
+
+        # Dispatch the requests
+        forensic1394_read_device_v(self, creq, len(creq))
+
+        # Return the buffer raw; the caller can slice it up
+        return buf.raw
+
     @checkStale
     def read(self, addr, numb):
         """
@@ -111,21 +145,34 @@ class Device(object):
         device must be open and the handle can not be stale.  Requests larger
         than self.request_size will automatically be broken down into smaller
         chunks.  The resulting data is returned.  An exception is raised should
-        an errors occur.
+        an error occur.
         """
-        assert self.isopen()
+        rs = self._request_size
 
-        # Allocate a buffer for the data
-        b = create_string_buffer(numb)
+        # Break the request up into rs size chunks; if numb % rs = 0 then
+        # lens may have an extra element; zip will take care of this
+        addrs = range(addr, addr + numb, rs)
+        lens = [rs] * (numb // rs) + [numb % rs]
 
-        # Break the request up into request_size chunks
-        for off in range(0, numb, self._request_size):
-            # Last chunk is a special case (numb - off)
-            n = min(numb - off, self._request_size)
+        # Dispatch to _readreq
+        return self._readreq(list(zip(addrs, lens)))
 
-            forensic1394_read_device(self, addr + off, n, byref(b, off))
+    @checkStale
+    def readv(self, req):
+        """
+        Performs a batch of read requests of the form: [(addr1, len1),
+        (addr2, len2), ...] and returns a generator yielding the
+        responses to each request (in order).  This is useful when
+        performing a series of `scatter reads' from a device.
+        """
+        # Use _readreq to read the requests into a linear buffer
+        buf = self._readreq(req)
 
-        return b.raw
+        # Generate the resulting buffers
+        off = 0
+        for _addr, numb in req:
+            yield buf[off:off + numb]
+            off += numb
 
     @checkStale
     def write(self, addr, buf):
@@ -133,17 +180,27 @@ class Device(object):
         Attempts to write len(buf) bytes to the device starting at addr.  The
         device must be open and the handle can not be stale.  Requests larger
         than self.request_size will automatically be broken down into smaller
-        chunks.
+        chunks.  Uses writev internally.
         """
+        # Break up the request
+        req = []
+        for off in range(0, len(buf), self._request_size):
+            req.append((addr + off, buf[off:off + self._request_size]))
+
+        # Dispatch
+        self.writev(req)
+
+    @checkStale
+    def writev(self, req):
         assert self.isopen()
 
-        numb = len(buf)
+        # Prepare the request array (addr, len, buf)
+        creq = (forensic1394_req * len(req)) \
+               (*[(addr, len(buf), cast(buf, c_void_p)) \
+                  for addr, buf in req])
 
-        # Break up the request
-        for off in range(0, numb, self._request_size):
-            n = min(numb - off, self._request_size)
-
-            forensic1394_write_device(self, addr + off, n, buf[off:off + n])
+        # Send off the requests
+        forensic1394_write_device_v(self, creq, len(creq))
 
     @property
     def nodeid(self):

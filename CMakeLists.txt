@@ -4,7 +4,7 @@ PROJECT(libforensic1394)
 
 # Current version of the library
 SET(FORENSIC1394_VERSION_MAJOR 0)
-SET(FORENSIC1394_VERSION_MINOR 1)
+SET(FORENSIC1394_VERSION_MINOR 2)
 SET(FORENSIC1394_VERSION_PATCH 0)
 
 # Overall version given as <major>.<minor>.<patch>

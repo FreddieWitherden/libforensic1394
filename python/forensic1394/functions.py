@@ -18,8 +18,9 @@
 #  <http://www.gnu.org/licenses/>.                                          #
 #############################################################################
 
-from ctypes import cdll, CFUNCTYPE, POINTER, c_int, c_size_t, c_uint64, \
-                   c_int64, c_uint32, c_uint16, c_void_p, c_char, c_char_p
+from ctypes import cdll, CFUNCTYPE, POINTER, Structure, c_int, c_size_t, \
+                   c_uint64, c_int64, c_uint32, c_uint16, c_void_p, c_char, \
+                   c_char_p
 from ctypes.util import find_library
 
 from forensic1394.errors import process_result
@@ -39,6 +40,13 @@ class busptr(c_void_p):
 
 class devptr(c_void_p):
     pass
+
+# Wrap the forensic1394_req structure
+# C def: struct { uint64_t addr, size_t len, void *buf }
+class forensic1394_req(Structure):
+    _fields_ = [("addr", c_uint64),
+                ("len", c_size_t),
+                ("buf", c_void_p)]
 
 # Wrap the forensic1394_device_callback type
 # C def: void (*forensic1394_device_callback) (forensic1394_bus *bus,
@@ -100,6 +108,17 @@ forensic1394_read_device.argtypes = [devptr, c_uint64, c_size_t, c_void_p]
 forensic1394_read_device.restype = c_int
 forensic1394_read_device.errcheck = process_result
 
+# Wrap the vectorised read device function
+# C def: forensic1394_result forensic1394_read_device_v(forensic1394_dev *dev,
+#                                                       forensic1394_req *req,
+#                                                       size_t nreq)
+forensic1394_read_device_v = lib.forensic1394_read_device_v
+forensic1394_read_device_v.argtypes = [devptr,
+                                       POINTER(forensic1394_req),
+                                       c_size_t]
+forensic1394_read_device_v.restype = c_int
+forensic1394_read_device.errcheck = process_result
+
 # Wrap the write device function
 # C def: forensic1394_result forensic1394_write_device(forensic1394_dev *dev,
 #                                                      uint64_t addr,
@@ -108,6 +127,17 @@ forensic1394_write_device = lib.forensic1394_write_device
 forensic1394_write_device.argtypes = [devptr, c_uint64, c_size_t, POINTER(c_char)]
 forensic1394_write_device.restype = c_int
 forensic1394_write_device.errcheck = process_result
+
+# Wrap the vectorised write device function
+# C def: forensic1394_result forensic1394_write_device_v(forensic1394_dev *dev,
+#                                                        forensic1394_req *req,
+#                                                        size_t nreq)
+forensic1394_write_device_v = lib.forensic1394_write_device_v
+forensic1394_write_device_v.argtypes = [devptr,
+                                        POINTER(forensic1394_req),
+                                        c_size_t]
+forensic1394_write_device_v.restypes = c_int
+forensic1394_write_device_v.errcheck = process_result
 
 # Wrap the device CSR function
 # C def: void forensic1394_get_device_csr(forensic1394_dev *dev, uint32_t *rom)

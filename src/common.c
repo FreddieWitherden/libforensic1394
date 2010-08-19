@@ -248,13 +248,28 @@ forensic1394_result forensic1394_read_device(forensic1394_dev *dev,
                                              size_t len,
                                              void *buf)
 {
+    forensic1394_req r;
+
     assert(dev);
     assert(dev->is_open);
 
-    // Mask the top 16-bits of the address
-    addr &= 0x0000ffffffffffffULL;
+    // Fill out a request structure
+    r.addr  = addr;
+    r.len   = len;
+    r.buf   = buf;
 
-    return platform_read_device(dev, addr, len, buf);
+    return platform_read_device_v(dev, &r, 1);
+}
+
+forensic1394_result forensic1394_read_device_v(forensic1394_dev *dev,
+                                               forensic1394_req *req,
+                                               size_t nreq)
+{
+    assert(dev);
+    assert(dev->is_open);
+    assert(req);
+
+    return platform_read_device_v(dev, req, nreq);
 }
 
 forensic1394_result forensic1394_write_device(forensic1394_dev *dev,
@@ -262,13 +277,27 @@ forensic1394_result forensic1394_write_device(forensic1394_dev *dev,
                                               size_t len,
                                               void *buf)
 {
+    forensic1394_req r;
+
     assert(dev);
     assert(dev->is_open);
 
-    // Mask the top 16-bits of the address
-    addr &= 0x0000ffffffffffffULL;
+    // Fill out a request structure
+    r.addr  = addr;
+    r.len   = len;
+    r.buf   = buf;
 
-    return platform_write_device(dev, addr, len, buf);
+    return platform_write_device_v(dev, &r, 1);
+}
+
+forensic1394_result forensic1394_write_device_v(forensic1394_dev *dev,
+                                                const forensic1394_req *req,
+                                                size_t nreq)
+{
+    assert(dev);
+    assert(dev->is_open);
+
+    return platform_write_device_v(dev, req, nreq);
 }
 
 void forensic1394_get_device_csr(forensic1394_dev *dev, uint32_t *rom)
