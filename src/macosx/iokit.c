@@ -90,10 +90,15 @@ struct _platform_dev
     IOFireWireLibDeviceRef devIntrf;
     io_object_t dev;
 
-    IOFireWireLibCommandRef readcmd[FORENSIC1394_NUM_READ_CMD];
-    IOFireWireLibCommandRef writecmd[FORENSIC1394_NUM_WRITE_CMD];
     IOReturn cmdret;
 };
+
+static void create_commands(forensic1394_dev *dev, request_type t,
+                            IOFireWireLibCommandRef *cmd,
+                            size_t ncmd);
+
+static void release_commands(IOFireWireLibCommandRef *cmd,
+                             size_t ncmd);
 
 /**
  * \brief Converts \a i into the closest matching \c forensic1394_result.
@@ -112,9 +117,9 @@ static forensic1394_result convert_ioreturn(IOReturn i);
 static void request_complete(void *refcon, IOReturn ret);
 
 static forensic1394_result send_requests(forensic1394_dev *dev,
+                                         request_type t,
                                          const forensic1394_req *req,
                                          size_t nreq,
-                                         IOFireWireLibCommandRef *cmd,
                                          size_t ncmd);
 
 static void copy_device_property_string(io_registry_entry_t dev,
@@ -400,43 +405,16 @@ forensic1394_result platform_open_device(forensic1394_dev *dev)
     IOReturn iret;
 
     IOFireWireLibDeviceRef intrf = dev->pdev->devIntrf;
-    io_object_t devio = dev->pdev->dev;
-
-    IOFireWireLibCommandRef *readcmd = dev->pdev->readcmd;
-    IOFireWireLibCommandRef *writecmd = dev->pdev->writecmd;
 
     // Attempt to open the device
     iret = (*intrf)->Open(intrf);
 
     if (iret == kIOReturnSuccess)
     {
-        int i;
-        FWAddress nulladdr = { 0, 0, 0 };
-
         // Add a custom callback mode "libforensic1394"
         (*intrf)->AddCallbackDispatcherToRunLoopForMode(intrf,
                                                         CFRunLoopGetCurrent(),
                                                         CFSTR("libforensic1394"));
-
-        // Create the read command handlers
-        for (i = 0; i < FORENSIC1394_NUM_READ_CMD; i++)
-        {
-            readcmd[i] = (*intrf)->CreateReadCommand(intrf, devio,
-                                                     &nulladdr, NULL, 0,
-                                                     request_complete, false, 0,
-                                                     &dev->pdev->cmdret,
-                                                     CFUUIDGetUUIDBytes(kIOFireWireReadCommandInterfaceID_v3));
-        }
-
-        // Create the write command handler(s)
-        for (i = 0; i < FORENSIC1394_NUM_WRITE_CMD; i++)
-        {
-            writecmd[i] = (*intrf)->CreateWriteCommand(intrf, devio,
-                                                       &nulladdr, NULL, 0,
-                                                       request_complete, false, 0,
-                                                       &dev->pdev->cmdret,
-                                                       CFUUIDGetUUIDBytes(kIOFireWireWriteCommandInterfaceID_v3));
-        }
     }
 
     return convert_ioreturn(iret);
@@ -444,20 +422,6 @@ forensic1394_result platform_open_device(forensic1394_dev *dev)
 
 void platform_close_device(forensic1394_dev *dev)
 {
-    int i;
-
-    // Release the read commands
-    for (i = 0; i < FORENSIC1394_NUM_READ_CMD; i++)
-    {
-        (*dev->pdev->readcmd[i])->Release(dev->pdev->readcmd[i]);
-    }
-
-    // Release the write commands
-    for (i = 0; i < FORENSIC1394_NUM_WRITE_CMD; i++)
-    {
-        (*dev->pdev->writecmd[i])->Release(dev->pdev->writecmd[i]);
-    }
-
     // Remove the callback handler added in open_device
     (*dev->pdev->devIntrf)->RemoveCallbackDispatcherFromRunLoop(dev->pdev->devIntrf);
 
@@ -469,16 +433,21 @@ forensic1394_result platform_read_device_v(forensic1394_dev *dev,
                                            forensic1394_req *req,
                                            size_t nreq)
 {
-    return send_requests(dev, req, nreq,
-                         dev->pdev->readcmd, FORENSIC1394_NUM_READ_CMD);
+    // Decide how many commands to use for the read
+    int ncmd = (nreq > FORENSIC1394_NUM_READ_CMD) ? FORENSIC1394_NUM_READ_CMD : nreq;
+
+    // Using these commands make the requests
+    return send_requests(dev, REQUEST_TYPE_READ, req, nreq, ncmd);
 }
 
 forensic1394_result platform_write_device_v(forensic1394_dev *dev,
                                             const forensic1394_req *req,
                                             size_t nreq)
 {
-    return send_requests(dev, req, nreq,
-                         dev->pdev->writecmd, FORENSIC1394_NUM_WRITE_CMD);
+    // Decide how many commands to use for the write
+    int ncmd = (nreq > FORENSIC1394_NUM_WRITE_CMD) ? FORENSIC1394_NUM_WRITE_CMD : nreq;
+
+    return send_requests(dev, REQUEST_TYPE_WRITE, req, nreq, ncmd);
 }
 
 forensic1394_result convert_ioreturn(IOReturn i)
@@ -505,17 +474,74 @@ void request_complete(void *ref, IOReturn result)
     // Cast ref to an IOReturn
     IOReturn *r = ref;
 
+    // Save the result; we'll pick it up later
     *r = result;
 }
 
-forensic1394_result send_requests(forensic1394_dev *dev,
+void create_commands(forensic1394_dev *dev, request_type t,
+                     IOFireWireLibCommandRef *cmd,
+                     size_t ncmd)
+{
+    int i;
+
+    IOFireWireLibDeviceRef intrf = dev->pdev->devIntrf;
+    io_object_t devio = dev->pdev->dev;
+
+    FWAddress nulladdr = { 0, 0, 0 };
+
+    for (i = 0; i < ncmd; i++)
+    {
+        if (t == REQUEST_TYPE_READ)
+        {
+            cmd[i] = (*intrf)->CreateReadCommand(intrf, devio,
+                                                 &nulladdr, NULL, 0,
+                                                 request_complete, 0, false,
+                                                 &dev->pdev->cmdret,
+                                                 CFUUIDGetUUIDBytes(kIOFireWireReadCommandInterfaceID_v3));
+        }
+        else
+        {
+            cmd[i] = (*intrf)->CreateWriteCommand(intrf, devio,
+                                                  &nulladdr, NULL, 0,
+                                                  request_complete, 0, false,
+                                                  &dev->pdev->cmdret,
+                                                  CFUUIDGetUUIDBytes(kIOFireWireWriteCommandInterfaceID_v3));
+        }
+    }
+}
+
+void release_commands(IOFireWireLibCommandRef *cmd,
+                      size_t ncmd)
+{
+    int i;
+
+    for (i = 0; i < ncmd; i++)
+    {
+        // If the command is currently executing; cancel it
+        if ((*cmd[i])->IsExecuting(cmd[i]))
+        {
+            (*cmd[i])->Cancel(cmd[i], 0);
+        }
+
+        // Release
+        (*cmd[i])->Release(cmd[i]);
+    }
+}
+
+forensic1394_result send_requests(forensic1394_dev *dev, request_type t,
                                   const forensic1394_req *req, size_t nreq,
-                                  IOFireWireLibCommandRef *cmd, size_t ncmd)
+                                  size_t ncmd)
 {
     forensic1394_result ret = FORENSIC1394_RESULT_SUCCESS;
 
     int i = 0, j;
     int inPipeline = 0;
+
+    // We need some commands in order to send the requests
+    IOFireWireLibCommandRef *cmd = alloca(ncmd * sizeof(IOFireWireLibCommandRef));
+
+    // Create and initalise the commands
+    create_commands(dev, t, cmd, ncmd);
 
     /*
      * We need to keep going until there are firstly no more requests to make
@@ -556,6 +582,9 @@ forensic1394_result send_requests(forensic1394_dev *dev,
             break;
         }
     }
+
+    // We're done with the commands
+    release_commands(cmd, ncmd);
 
     return ret;
 }

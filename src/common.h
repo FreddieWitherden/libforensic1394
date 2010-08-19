@@ -25,6 +25,12 @@
 #define FORENSIC1394_DEV_LIST_SZ 16
 #define FORENSIC1394_DEV_NAME_SZ 64
 
+typedef enum
+{
+    REQUEST_TYPE_READ,
+    REQUEST_TYPE_WRITE
+} request_type;
+
 typedef struct _platform_bus platform_bus;
 
 typedef struct _platform_dev platform_dev;

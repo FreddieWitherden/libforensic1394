@@ -57,12 +57,6 @@
  */
 #define REQUEST_PIPELINE_SZ 1
 
-typedef enum
-{
-    REQUEST_TYPE_READ,
-    REQUEST_TYPE_WRITE
-} request_type;
-
 struct _platform_bus
 {
     int sbp2_fd;
