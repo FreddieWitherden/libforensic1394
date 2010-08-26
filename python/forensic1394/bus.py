@@ -27,26 +27,30 @@ from forensic1394.functions import forensic1394_alloc, forensic1394_destroy, \
                                    forensic1394_get_devices
 from forensic1394.device import Device
 
+import weakref
+
 class Bus(object):
     def __init__(self):
         # Allocate a new bus handle; _as_parameter_ allows passing of self
         self._as_parameter_ = forensic1394_alloc()
 
-        # Internal copy of the most recent device list
-        self._devices = []
+        # Weak references to the most recent device list
+        self._wrefdev = []
 
     def enable_sbp2(self):
         # Re-raise for a cleaner stack trace
         forensic1394_enable_sbp2(self)
 
     def devices(self):
-        # Mark any active device handles as being stale, preventing further use
-        for d in self._devices:
-            d._stale = True
+        # Mark any active device handles as being stale
+        for wdev in self._wrefdev:
+            if wdev():
+                wdev()._stale = True
 
-        # Clear the existing device list
-        self._devices = []
+        # Clear the current list of weak references
+        self._wrefdev = []
 
+        dev = []
         ndev = c_int(0)
 
         # Query the list of devices attached to the system
@@ -58,10 +62,13 @@ class Bus(object):
 
         # Create Device instances for the devices found
         for i in range(0, ndev.value):
-            self._devices.append(Device(self, devlist[i]))
+            d = Device(self, devlist[i])
+            dev.append(d)
+            # Maintain a weak reference to this device
+            self._wrefdev.append(weakref.ref(d))
 
-        # Return a copy of the device list
-        return self._devices[:]
+        # Return the device list
+        return dev
 
     def __del__(self):
         forensic1394_destroy(self)
