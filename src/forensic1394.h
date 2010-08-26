@@ -68,7 +68,9 @@
  *  affected by bus resets:
  *   - \c forensic1394_open_device
  *   - \c forensic1394_read_device
- *   - \c forensic1394_read_device
+ *   - \c forensic1394_read_device_v
+ *   - \c forensic1394_write_device
+ *   - \c forensic1394_write_device_v
  *
  * \par
  * After a bus reset calls to all three of these methods will result in
