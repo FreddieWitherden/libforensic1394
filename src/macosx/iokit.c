@@ -287,6 +287,8 @@ forensic1394_result platform_update_device_list(forensic1394_bus *bus)
     {
         IOCFPlugInInterface **plugIn;
         SInt32 theScore;
+        UInt32 generation;
+        UInt16 nodeid;
 
         // Allocate memory for a forensic1394 device
         forensic1394_dev *fdev = malloc(sizeof(forensic1394_dev));
@@ -344,12 +346,15 @@ forensic1394_result platform_update_device_list(forensic1394_bus *bus)
 
         // Get the bus generation
         (*fdev->pdev->devIntrf)->GetBusGeneration(fdev->pdev->devIntrf,
-                                                  &fdev->generation);
+                                                  &generation);
 
         // Get the node ID
         (*fdev->pdev->devIntrf)->GetRemoteNodeID(fdev->pdev->devIntrf,
-                                                 fdev->generation,
-                                                 &fdev->nodeid);
+                                                 generation,
+                                                 &nodeid);
+
+        fdev->generation = generation;
+        fdev->nodeid = nodeid;
 
         // See if we need to extend the device list; +1 as the last device
         // is always NULL, hence taking up a slot
