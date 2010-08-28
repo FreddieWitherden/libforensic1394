@@ -292,7 +292,7 @@ forensic1394_result platform_update_device_list(forensic1394_bus *bus)
         forensic1394_dev *fdev = malloc(sizeof(forensic1394_dev));
 
         // And for the platform specific structure
-        fdev->pdev = malloc(sizeof(platform_bus));
+        fdev->pdev = malloc(sizeof(platform_dev));
 
         // Copy over the device IO object to the structure
         fdev->pdev->dev = currdev;
