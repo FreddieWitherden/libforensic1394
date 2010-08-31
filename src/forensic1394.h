@@ -28,7 +28,7 @@
  * \mainpage libforensic1394
  *
  * The latest version of libforensic1394 can be found at:
- *      http://freddie.witherden.org/tools/libforensic1394/
+ *      https://freddie.witherden.org/tools/libforensic1394/
  *
  * This API gives you access to the firewire bus of contemporary operating
  *  systems in order to facilitate digital forensics on an attached device.

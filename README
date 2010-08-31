@@ -11,7 +11,7 @@ About libforensic1394
 
   Further information on libforensic1394 can be found at:
 
-    http://freddie.witherden.org/tools/libforensic1394/
+    https://freddie.witherden.org/tools/libforensic1394/
 
   Contact information can be found in the `AUTHORS` file.
 
@@ -110,7 +110,7 @@ Building libforensic1394
 Python Bindings
 
   Python language  bindings are provided in the  python/ directory and
-  are  compatible with  all versions  of Python  since  2.6 (including
+  are  compatible with  all versions  of Python  since  2.5 (including
   Python 3).   The bindings themselves are written  entirely in Python
   and interface with libforensic1394 using the ctypes package.
 
