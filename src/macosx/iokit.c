@@ -90,15 +90,17 @@ struct _platform_dev
     IOFireWireLibDeviceRef devIntrf;
     io_object_t dev;
 
+    IOFireWireLibCommandRef readcmd[FORENSIC1394_NUM_READ_CMD];
+    IOFireWireLibCommandRef writecmd[FORENSIC1394_NUM_WRITE_CMD];
     IOReturn cmdret;
 };
 
 static void create_commands(forensic1394_dev *dev, request_type t,
-                            IOFireWireLibCommandRef *cmd,
-                            size_t ncmd);
+                            IOFireWireLibCommandRef *cmd, size_t ncmd);
 
-static void release_commands(IOFireWireLibCommandRef *cmd,
-                             size_t ncmd);
+static void cancel_commands(IOFireWireLibCommandRef *cmd, size_t ncmd);
+
+static void release_commands(IOFireWireLibCommandRef *cmd, size_t ncmd);
 
 /**
  * \brief Converts \a i into the closest matching \c forensic1394_result.
@@ -420,6 +422,12 @@ forensic1394_result platform_open_device(forensic1394_dev *dev)
         (*intrf)->AddCallbackDispatcherToRunLoopForMode(intrf,
                                                         CFRunLoopGetCurrent(),
                                                         CFSTR("libforensic1394"));
+
+        // Create the read and write commands
+        create_commands(dev, REQUEST_TYPE_READ, dev->pdev->readcmd,
+                        FORENSIC1394_NUM_READ_CMD);
+        create_commands(dev, REQUEST_TYPE_WRITE, dev->pdev->writecmd,
+                        FORENSIC1394_NUM_WRITE_CMD);
     }
 
     return convert_ioreturn(iret);
@@ -427,6 +435,10 @@ forensic1394_result platform_open_device(forensic1394_dev *dev)
 
 void platform_close_device(forensic1394_dev *dev)
 {
+    // Release the read and write commands
+    release_commands(dev->pdev->readcmd, FORENSIC1394_NUM_READ_CMD);
+    release_commands(dev->pdev->writecmd, FORENSIC1394_NUM_WRITE_CMD);
+
     // Remove the callback handler added in open_device
     (*dev->pdev->devIntrf)->RemoveCallbackDispatcherFromRunLoop(dev->pdev->devIntrf);
 
@@ -476,16 +488,19 @@ forensic1394_result convert_ioreturn(IOReturn i)
 
 void request_complete(void *ref, IOReturn result)
 {
-    // Cast ref to an IOReturn
+    // Cast ref to an IOReturn (ref == &dev->pdev->cmdret)
     IOReturn *r = ref;
 
-    // Save the result; we'll pick it up later
-    *r = result;
+    // Only overwrite ref if it does not hold an error-code
+    if (*r == kIOReturnSuccess)
+    {
+        // Save the result; we'll pick it up later
+        *r = result;
+    }
 }
 
 void create_commands(forensic1394_dev *dev, request_type t,
-                     IOFireWireLibCommandRef *cmd,
-                     size_t ncmd)
+                     IOFireWireLibCommandRef *cmd, size_t ncmd)
 {
     int i;
 
@@ -515,8 +530,7 @@ void create_commands(forensic1394_dev *dev, request_type t,
     }
 }
 
-void release_commands(IOFireWireLibCommandRef *cmd,
-                      size_t ncmd)
+void cancel_commands(IOFireWireLibCommandRef *cmd, size_t ncmd)
 {
     int i;
 
@@ -527,7 +541,15 @@ void release_commands(IOFireWireLibCommandRef *cmd,
         {
             (*cmd[i])->Cancel(cmd[i], 0);
         }
+    }
+}
 
+void release_commands(IOFireWireLibCommandRef *cmd, size_t ncmd)
+{
+    int i;
+
+    for (i = 0; i < ncmd; i++)
+    {
         // Release
         (*cmd[i])->Release(cmd[i]);
     }
@@ -543,10 +565,11 @@ forensic1394_result send_requests(forensic1394_dev *dev, request_type t,
     int inPipeline = 0;
 
     // We need some commands in order to send the requests
-    IOFireWireLibCommandRef *cmd = alloca(ncmd * sizeof(IOFireWireLibCommandRef));
+    IOFireWireLibCommandRef *cmd = (t == REQUEST_TYPE_READ) ? dev->pdev->readcmd
+                                                            : dev->pdev->writecmd;
 
-    // Create and initalise the commands
-    create_commands(dev, t, cmd, ncmd);
+    // Reset cmdret in case a previous request failed
+    dev->pdev->cmdret = kIOReturnSuccess;
 
     /*
      * We need to keep going until there are firstly no more requests to make
@@ -555,10 +578,11 @@ forensic1394_result send_requests(forensic1394_dev *dev, request_type t,
     while (i < nreq || inPipeline > 0)
     {
         // Send as many requests as possible
-        for (j = 0; inPipeline < ncmd && i < nreq; j++)
+        for (j = 0; inPipeline < ncmd && j < ncmd && i < nreq; j++)
         {
             IOFireWireLibCommandRef c = cmd[j];
 
+            // See if the command is currently idle
             if (!(*c)->IsExecuting(c))
             {
                 // Decompose the address; the nodeID is handled by IOKit
@@ -588,8 +612,8 @@ forensic1394_result send_requests(forensic1394_dev *dev, request_type t,
         }
     }
 
-    // We're done with the commands
-    release_commands(cmd, ncmd);
+    // Cancel any commands still executing
+    cancel_commands(cmd, ncmd);
 
     return ret;
 }
