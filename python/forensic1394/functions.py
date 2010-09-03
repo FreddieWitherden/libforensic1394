@@ -91,7 +91,7 @@ forensic1394_open_device.errcheck = process_result
 # C def: void forensic1394_close_device(forensic1394_dev *dev)
 forensic1394_close_device = lib.forensic1394_close_device
 forensic1394_close_device.argtypes = [devptr]
-forensic1394_close_device.restype = c_int
+forensic1394_close_device.restype = None
 
 # Wrap the is device open function
 # C def: int forensic1394_device_is_open(forensic1394_dev *dev)
