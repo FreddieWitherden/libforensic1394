@@ -159,17 +159,17 @@ class Device(object):
     def readv(self, req):
         """
         Performs a batch of read requests of the form: [(addr1, len1),
-        (addr2, len2), ...] and returns a generator yielding the
-        responses to each request (in order).  This is useful when
-        performing a series of `scatter reads' from a device.
+        (addr2, len2), ...] and returns a generator yielding, in
+        sequence, (addr1, buf1), (addr2, buf2), ..., .  This is useful
+        when performing a series of `scatter reads' from a device.
         """
         # Use _readreq to read the requests into a linear buffer
         buf = self._readreq(req)
 
         # Generate the resulting buffers
         off = 0
-        for _addr, numb in req:
-            yield buf[off:off + numb]
+        for addr, numb in req:
+            yield (addr, buf[off:off + numb])
             off += numb
 
     @checkStale
