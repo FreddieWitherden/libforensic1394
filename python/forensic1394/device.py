@@ -106,14 +106,11 @@ class Device(object):
         else:
             return bool(forensic1394_is_device_open(self))
 
-    def _readreq(self, req):
+    def _readreq(self, req, buf):
         """
         Internal low level read function.
         """
         assert self.isopen()
-
-        # Create the request buffer
-        buf = create_string_buffer(sum(numb for _addr, numb in req))
 
         # Get a pointer directly into the buffer which we can perform
         # arithmetic on. Compared to cast(byref(buf, off), c_void_p)
@@ -133,27 +130,31 @@ class Device(object):
         # Dispatch the requests
         forensic1394_read_device_v(self, creq, len(creq))
 
-        # Return the buffer raw; the caller can slice it up
-        return buf.raw
-
     @checkStale
-    def read(self, addr, numb):
+    def read(self, addr, numb, buf=None):
         """
-        Attempts to read numb bytes from the device starting at addr.  The
-        device must be open and the handle can not be stale.  Requests larger
-        than self.request_size will automatically be broken down into smaller
-        chunks.  The resulting data is returned.  An exception is raised should
-        an error occur.
+        Attempts to read numb bytes from the device starting at addr.
+        The device must be open and the handle can not be stale.
+        Requests larger than self.request_size will automatically be
+        broken down into smaller chunks.  The resulting data is
+        returned.  An exception is raised should an error occur.  The
+        optional buf parameter can be used to pass a specific ctypes
+        c_char array to read into.  If no buffer is passed then
+        create_string_buffer will be used to allocate one.
         """
-        rs = self._request_size
+        if buf == None:
+            # No buffer passed; allocate one
+            buf = create_string_buffer(numb)
 
         # Break the request up into rs size chunks; if numb % rs = 0 then
         # lens may have an extra element; zip will take care of this
+        rs = self._request_size
         addrs = range(addr, addr + numb, rs)
         lens = [rs] * (numb // rs) + [numb % rs]
 
-        # Dispatch to _readreq
-        return self._readreq(list(zip(addrs, lens)))
+        self._readreq(list(zip(addrs, lens)), buf)
+
+        return buf.raw
 
     @checkStale
     def readv(self, req):
@@ -163,13 +164,16 @@ class Device(object):
         sequence, (addr1, buf1), (addr2, buf2), ..., .  This is useful
         when performing a series of `scatter reads' from a device.
         """
-        # Use _readreq to read the requests into a linear buffer
-        buf = self._readreq(req)
+        # Create the request buffer
+        buf = create_string_buffer(sum(numb for _addr, numb in req))
+
+        # Use _readreq to read the requests into buf
+        self._readreq(req, buf)
 
         # Generate the resulting buffers
         off = 0
         for addr, numb in req:
-            yield (addr, buf[off:off + numb])
+            yield (addr, buf.raw[off:off + numb])
             off += numb
 
     @checkStale
