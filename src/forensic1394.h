@@ -80,6 +80,16 @@
  *  The new list of devices can then be iterated through and their GUIDs
  *  compared against saved GUIDs.
  *
+ * \par Thread safety
+ * libforensic1394 is thread safe at the device level with the restriction
+ *  that devices can only be accessed by the thread that opened them.  This is
+ *  because some backends, namely Mac OS X/IOKit, install thread-specific
+ *  callback dispatchers upon opening a device.  When using multiple threads of
+ *  execution care must be taken when calling \c forensic1394_get_devices (which
+ *  closes and destroys any open device handles).  It is the responsibility of
+ *  the caller to ensure that this is safe.  The process can be simplified
+ *  through the use of an \a ondestroy callback handler.
+ *
  * \author Freddie Witherden
  */
 
