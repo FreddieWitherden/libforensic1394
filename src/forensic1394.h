@@ -20,8 +20,7 @@
 /**
  * \file forensic1394.h
  *
- * Main header file for libforensic1394 which provides prototypes for all public
- *  structures/methods.
+ * \brief Main header file for libforensic1394.
  */
 
 /**
@@ -30,10 +29,10 @@
  * The latest version of libforensic1394 can be found at:
  *      https://freddie.witherden.org/tools/libforensic1394/
  *
- * This API gives you access to the firewire bus of contemporary operating
+ * This API gives you access to the FireWire bus of contemporary operating
  *  systems in order to facilitate digital forensics on an attached device.
  *  Unlike existing APIs Forensic1394 is:
- *   - Modern; unlike existing firewire libraries Forensic1394 supports the
+ *   - Modern; unlike existing FireWire libraries Forensic1394 supports the
  *      new `Juju' stack introduced in Linux 2.6.22.
  *   - Portable; with platform drivers existing for both Linux (Juju stack
  *      only) and Mac OS X (via I/O Kit).
@@ -45,38 +44,52 @@
  *  the memory of an attached device can be read using the following code:
  *
  * \code
- * forensic1394_bus *bus; forensic1394_dev **dev; char data[512];
+ * forensic1394_bus *bus;
+ * forensic1394_dev **dev;
+ * char data[512];
  *
- * bus = forensic1394_alloc(); assert(bus);
+ * // Allocate a bus handle
+ * bus = forensic1394_alloc();
+ * assert(bus);
  *
- * forensic1394_enable_sbp2(bus); sleep(2);
+ * // Enabls SBP-2; required for memory access to some systems
+ * forensic1394_enable_sbp2(bus);
  *
- * dev = forensic1394_get_devices(bus, NULL, NULL); assert(dev);
+ * // Give the bus time to reinitialise
+ * sleep(2);
  *
+ * // Get the devices attached to the systen
+ * dev = forensic1394_get_devices(bus, NULL, NULL);
+ * assert(dev);
+ *
+ * // Open the first device
  * forensic1394_open_device(dev[0]);
  *
+ * // Read some memory from the device
  * forensic1394_read_device(dev[0], 50 * 1024 * 1024, 512, data);
  *
  * // Data now contains 512 bytes of memory starting at an offset of 50MiB
  *
- * forensic1394_close_device(dev[0]); forensic1394_destroy(bus);
+ * // Close the device and destroy the bus
+ * forensic1394_close_device(dev[0]);
+ * forensic1394_destroy(bus);
  * \endcode
  *
  * \par Handling bus resets
  * Bus resets occur when devices are added/removed from the system or when the
  *  configuration ROM of a device is updated.  The following methods are
  *  affected by bus resets:
- *   - \c forensic1394_open_device
- *   - \c forensic1394_read_device
- *   - \c forensic1394_read_device_v
- *   - \c forensic1394_write_device
- *   - \c forensic1394_write_device_v
+ *   - ::forensic1394_open_device
+ *   - ::forensic1394_read_device
+ *   - ::forensic1394_read_device_v
+ *   - ::forensic1394_write_device
+ *   - ::forensic1394_write_device_v
  *
  * \par
  * After a bus reset calls to all three of these methods will result in
- *  \c FORENSIC1394_RESULT_BUS_RESET being returned.  Applications should
+ *  #FORENSIC1394_RESULT_BUS_RESET being returned.  Applications should
  *  handle this by saving the GUIDs of any devices being accessed and then call
- *  \c forensic1394_get_devices.  Calling this will void all device handles.
+ *  ::forensic1394_get_devices.  Calling this will void all device handles.
  *  The new list of devices can then be iterated through and their GUIDs
  *  compared against saved GUIDs.
  *
@@ -85,7 +98,7 @@
  *  that devices can only be accessed by the thread that opened them.  This is
  *  because some backends, namely Mac OS X/IOKit, install thread-specific
  *  callback dispatchers upon opening a device.  When using multiple threads of
- *  execution care must be taken when calling \c forensic1394_get_devices (which
+ *  execution care must be taken when calling ::forensic1394_get_devices (which
  *  closes and destroys any open device handles).  It is the responsibility of
  *  the caller to ensure that this is safe.  The process can be simplified
  *  through the use of an \a ondestroy callback handler.
@@ -145,17 +158,17 @@ typedef struct _forensic1394_req
 /**
  * \brief Number of uint32 elements required to store a device ROM.
  *
- * A FireWire configuration status ROM (`csr') is made up of unsigned 32-bit
+ * A FireWire configuration status ROM (CSR) is made up of unsigned 32-bit
  *  integers.  The maximum size of a ROM is 1024-bytes, giving 256 elements.
  */
 #define FORENSIC1394_CSR_SZ 256
 
 /**
- * A function to be called when a \c forensic1394_dev is about to be destroyed.
- *  This should be passed to \c forensic1394_get_devices and will be associated
+ * A function to be called when a ::forensic1394_dev is about to be destroyed.
+ *  This should be passed to ::forensic1394_get_devices and will be associated
  *  with all devices returned by the method.  The callback will fire either when
- *  the bus is destroyed via \c forensic1394_destroy or the next time that
- *  \c forensic1394_get_devices is called (which has the implicit effect of
+ *  the bus is destroyed via ::forensic1394_destroy or the next time that
+ *  ::forensic1394_get_devices is called (which has the implicit effect of
  *  destroying all existing devices first).
  *
  * If user data is required it can be attached on either a per-bus or per-device
@@ -164,8 +177,8 @@ typedef struct _forensic1394_req
  *   \param bus The bus owning the device.
  *   \param dev The device being destroyed.
  *
- * \sa forensic1394_bus_set_user_data
- * \sa forensic1394_device_set_user_data
+ * \sa forensic1394_set_bus_user_data
+ * \sa forensic1394_set_device_user_data
  */
 typedef void (*forensic1394_device_callback) (forensic1394_bus *bus,
                                               forensic1394_dev *dev);
@@ -173,12 +186,10 @@ typedef void (*forensic1394_device_callback) (forensic1394_bus *bus,
 /**
  * \brief Possible return status codes.
  *
- * The possible return codes for a forensic1394 function.  In general methods
- *  return 0 on success and a negative integer on failure.  These codes may be
- *  used to ascertain precisely why a method failed.
- *
- * It is worth noting that invalid input parameters are handled with assertions
- *  as opposed to status codes.
+ * In general methods return 0 on success and a negative integer on failure.
+ *  These codes may be used to ascertain precisely why a method failed. It is
+ *  worth noting that invalid input parameters are handled with assertions as
+ *  opposed to status codes.
  *
  * \sa forensic1394_get_result_str
  */
@@ -205,9 +216,8 @@ typedef enum
 /**
  * \brief Allocates a new forensic1394 handle.
  *
- * Allocates and initialises a new handle to the systems firewire bus.  This bus
- *  can then be used to query the devices attached to the bus and to update the
- *  configuration status ROM (`CSR') of the bus.
+ * This handle can then be used to query the devices attached to the bus and to
+ *  update the configuration status ROM (CSR) of the bus.
  *
  *  \return A handle to a forensic1394_bus on success, NULL otherwise.
  */
@@ -220,7 +230,7 @@ FORENSIC1394_DECL forensic1394_bus *forensic1394_alloc(void);
  *  unit directory.  This is required in order for some connected
  *  devices to allow for direct memory access (`DMA').
  *
- * Note that this is usually a global change, affecting all firewire
+ * Note that this is usually a global change, affecting all FireWire
  *  ports on the system.
  *
  * As calling this method usually results in a bus reset it is advisable to
@@ -233,24 +243,24 @@ FORENSIC1394_DECL forensic1394_result
 forensic1394_enable_sbp2(forensic1394_bus *bus);
 
 /**
- * \brief Gets the devices attached to the firewire bus.
+ * \brief Gets the devices attached to the FireWire bus.
  *
  * This method scans the (foreign) devices attached to \a bus and returns a
  *  NULL-terminated list of them.
  *
  * The out-parameter \a ndev, if not NULL, serves a dual purpose.  After a call
- *  to the function if \c *ndev is:
+ *  to the function if \a *ndev is:
  *
  *   - >= 0 then the call was successful and it contains the number of devices
  *      attached to the system, which may be 0 if no devices are attached.
  *   - < 0 then the call was not successful and it contains the appropriate
- *      \a forensic1394_result error code.
+ *      ::forensic1394_result error code.
  *
  * Getting the attached devices is a destructive process; voiding any existing
  *  device handles.  To compensate for this the \a ondestroy callback is
  *  provided.  This argument, if not NULL, will be called when the new device
  *  list is destroyed, usually as a result of a subsequent call to
- *  \c forensic1394_get_devices or a call to \c forensic1394_destroy.  The
+ *  ::forensic1394_get_devices or a call to ::forensic1394_destroy.  The
  *  function is called for each device in the list.
  *
  * \warning Calling this method will invalidate all active device handles.
@@ -272,10 +282,8 @@ forensic1394_get_devices(forensic1394_bus *bus,
 /**
  * \brief Destroys a bus handle.
  *
- * Destroys a bus handle, releasing all of the memory associated with
- *  the handle.
- *
- * After a call to this method all forensic1394 device handles are
+ * Releases all of the memory associated with the handle, closing any open
+ *  devices. After a call to this method all forensic1394 device handles are
  *  invalidated.
  *
  *  \param bus The forensic1394_bus to destroy.
@@ -286,7 +294,7 @@ forensic1394_destroy(forensic1394_bus *bus);
 /**
  * \brief Fetches the user data for \a bus.
  *
- * Returns the user data for \a bus.  If \c forensic1394_set_bus_user_data is
+ * Returns the user data for \a bus.  If ::forensic1394_set_bus_user_data is
  *  yet to be called on the bus the result is undefined.
  *
  *   \param bus The bus.
@@ -300,8 +308,6 @@ forensic1394_get_bus_user_data(forensic1394_bus *bus);
 /**
  * \brief Sets the user data for the bus.
  *
- * Sets the user data for \a bus to \a u.
- *
  *   \param bus The bus.
  *   \param[in] u The user data to set.
  *
@@ -313,11 +319,12 @@ forensic1394_set_bus_user_data(forensic1394_bus *bus, void *u);
 /**
  * \brief Opens the device \a dev for reading/writing.
  *
- * Attempts to open up the firewire device dev.  It is necessary to open a
- *  device before attempting to read/write from it.
+ * It is necessary to open a device before attempting to read/write from it.
  *
  *   \param dev The device to open.
  *  \return A result status code.
+ *
+ * \a forensic1394_close_device
  */
 FORENSIC1394_DECL forensic1394_result
 forensic1394_open_device(forensic1394_dev *dev);
@@ -325,8 +332,7 @@ forensic1394_open_device(forensic1394_dev *dev);
 /**
  * \brief Closes the device \a dev.
  *
- * Closes the firewire device \a dev.  This can only be called on an open
- *  device.
+ * This can only be called on an open device.
  *
  *   \param dev The device to close.
  */
@@ -336,9 +342,7 @@ forensic1394_close_device(forensic1394_dev *dev);
 /**
  * \brief Checks if a device is open or not.
  *
- * Determines if the firewire device dev is open or not.
- *
- *   \param dev The firewire device.
+ *   \param dev The FireWire device.
  *  \return Non-zero if the device is open; 0 if it is closed.
  */
 FORENSIC1394_DECL int
@@ -353,10 +357,9 @@ forensic1394_is_device_open(forensic1394_dev *dev);
  *
  * It is worth noting that many devices impose a limit on the maximum transfer
  *  size.  This limit can be obtained by calling
- *  \a forensic1394_get_device_request_size and is usually around 2048-bytes in
- *  size.
+ *  ::forensic1394_get_device_request_size and is usually 2048 bytes in size.
  *
- * This method is a convenience wrapper around \c forensic1394_read_device_v.
+ * This method is a convenience wrapper around ::forensic1394_read_device_v.
  *
  *   \param dev The device to read from.
  *   \param addr The memory address to start reading from.
@@ -379,10 +382,10 @@ forensic1394_read_device(forensic1394_dev *dev,
  *
  * Vectorised, scatter input, read method.  By issuing requests asynchronously
  *  this function is often able to offer better performance than a series of
- *  \c forensic1394_read_device calls.  The performance gains, if any, depend
+ *  ::forensic1394_read_device calls.  The performance gains, if any, depend
  *  heavily on the capabilities of the backend.
  *
- * Each request must be no larger than \c forensic1394_get_device_request_size
+ * Each request must be no larger than ::forensic1394_get_device_request_size
  *  bytes.  If any of the data buffers in \a req overlap then the behaviour
  *  is undefined.
  *
@@ -404,16 +407,18 @@ forensic1394_read_device_v(forensic1394_dev *dev,
  *
  * Performs a blocking (synchronous) write on the device \a dev attempting to
  *  copy \a len bytes from \a buf to the device address \a addr.  See
- *  the documentation for \c forensic1394_read_device for a discussion on the
+ *  the documentation for ::forensic1394_read_device for a discussion on the
  *  maximum transfer size.
  *
- * This method is a convenience wrapper around \c forensic1394_write_device_v.
+ * This method is a convenience wrapper around ::forensic1394_write_device_v.
  *
  *   \param dev The device to write to.
  *   \param addr The memory address to start writing to.
  *   \param len The number of bytes to write.
  *   \param[in] buf The buffer to write.
  *  \return A result status code.
+ *
+ * \a forensic1394_read_device
  */
 FORENSIC1394_DECL forensic1394_result
 forensic1394_write_device(forensic1394_dev *dev,
@@ -426,7 +431,7 @@ forensic1394_write_device(forensic1394_dev *dev,
  *
  * The vectorised, gather output, write method.  Depending on the backend this
  *  method may issue the requests in \a req asynchronously in order to improve
- *  performance.  See \c forensic1394_read_device_v for further discussion.
+ *  performance.  See ::forensic1394_read_device_v for further discussion.
  *
  *   \param dev The device to write to.
  *   \param[in] req The write requests to service.
@@ -441,8 +446,8 @@ forensic1394_write_device_v(forensic1394_dev *dev,
 /**
  * \brief Copies the configuration ROM for the device \a dev into \a rom.
  *
- * Fetches the configuration status ROM (`csr') for the device and copies it
- *  into \a rom.  This is assumed to be of at least \c FORENSIC1394_CSR_SZ
+ * Fetches the configuration status ROM (CSR) for the device and copies it
+ *  into \a rom.  This is assumed to be of at least #FORENSIC1394_CSR_SZ
  *  elements in size.  Any unused space will be filled with zeros.
  *
  *   \param dev The device.
@@ -455,9 +460,8 @@ forensic1394_get_device_csr(forensic1394_dev *dev,
 /**
  * \brief Returns the node ID of the device.
  *
- * Returns the node ID of the device \a dev.  It is important to note that this
- *  value does not remain constant across bus resets and is hence unsuitable
- *  for device identification.
+ * It is important to note that this value does not remain constant across bus
+ *  resets and is hence unsuitable for device identification.
  *
  *   \param dev The device.
  *  \return The node ID of the device.
@@ -468,8 +472,8 @@ forensic1394_get_device_nodeid(forensic1394_dev *dev);
 /**
  * \brief Returns the GUID of the device.
  *
- * Fetches and returns the GUID of the device \a dev.  This is a 48-bit value,
- *  similar to a MAC address, that uniquely identifies a FireWire device.
+ * This is a 48-bit value, similar to a MAC address, that uniquely identifies
+ *  a FireWire device.
  *
  *   \param dev The device.
  *  \return The GUID of the device.
@@ -480,9 +484,9 @@ forensic1394_get_device_guid(forensic1394_dev *dev);
 /**
  * \brief Returns the product name of the device, if any.
  *
- * Returns the product name of the device \a dev.  Should the property not
- *  exist for the device an empty string ("") is returned.  The string is
- *  guaranteed to remain valid for the lifetime of the device.
+ * Should the property not exist for the device an empty string ("") is
+ *  returned.  The string is guaranteed to remain valid for the lifetime of the
+ *  device.
  *
  *   \param dev The device.
  *  \return The product name of the device, if any.
@@ -493,8 +497,7 @@ forensic1394_get_device_product_name(forensic1394_dev *dev);
 /**
  * \brief Returns the product ID of the device, if any.
  *
- * Returns the product ID of the device \a dev.  Should the property not exist
- *  then 0 is returned.
+ * Should the property not exist then 0 is returned.
  *
  *   \param dev The device.
  *  \return The product ID of the device, or 0 if it is not defined.
@@ -505,9 +508,9 @@ forensic1394_get_device_product_id(forensic1394_dev *dev);
 /**
  * \brief Returns the vendor name of the device, if any.
  *
- * Returns the vendor name of the device \a dev.  Should the property not
- *  exist for the device an empty string ("") is returned.  The string is
- *  guaranteed to remain valid for the lifetime of the device.
+ * Should the property not exist for the device an empty string ("") is
+ *  returned.  The string is guaranteed to remain valid for the lifetime of the
+ *  device.
  *
  *   \param dev The device.
  *  \return The vendor name of the device, if any.
@@ -531,9 +534,9 @@ forensic1394_get_device_vendor_id(forensic1394_dev *dev);
  * \brief Returns the maximum request size supported by the device.
  *
  * Parses the configuration status ROM for the device and extracts the maximum
- *  supported request size (usually 2048-bytes).  This value should be taken as
+ *  supported request size (usually 2048 bytes).  This value should be taken as
  *  an upper-bound for the length of read/write calls.  If a size can not be
- *  found in the CSR then 512-bytes will be returned.
+ *  found in the CSR then 512 bytes will be returned.
  *
  * The returned size is guaranteed to be a positive power of two.
  *
@@ -546,8 +549,8 @@ forensic1394_get_device_request_size(forensic1394_dev *dev);
 /**
  * \brief Fetches the user data for the device \a dev.
  *
- * Returns the user data for \a dev.  If \c forensic1394_set_device_user_data is
- *  yet to be called on the device the result is undefined.
+ * If ::forensic1394_set_device_user_data is yet to be called on the device the
+ *  result is undefined.
  *
  *   \param dev The device.
  *  \return The user data associated with the device.
@@ -558,9 +561,7 @@ FORENSIC1394_DECL void *
 forensic1394_get_device_user_data(forensic1394_dev *dev);
 
 /**
- * \brief Sets the user data for the device \a dev.
- *
- * Sets the user data for \a device to \a u.
+ * \brief Sets the user data for the device \a dev to \a u.
  *
  *   \param dev The device.
  *   \param[in] u The user data to set.
