@@ -521,8 +521,7 @@ forensic1394_get_device_vendor_name(forensic1394_dev *dev);
 /**
  * \brief Returns the vendor ID of the device, if any.
  *
- * Returns the vendor ID of the device \a dev.  Should the property not exist
- *  then 0 is returned.
+ * Should the property not exist then 0 is returned.
  *
  *   \param dev The device.
  *  \return The vendor ID of the device, or 0 if it is not defined.
