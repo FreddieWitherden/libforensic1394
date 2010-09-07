@@ -38,7 +38,10 @@ from forensic1394.functions import forensic1394_open_device, \
                                    forensic1394_get_device_request_size, \
                                    forensic1394_req
 
+from functools import wraps
+
 def checkStale(f):
+    @wraps(f)
     def newf(self, *args, **kwargs):
         if self._stale:
             raise Forensic1394StaleHandle
