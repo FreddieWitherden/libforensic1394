@@ -136,7 +136,7 @@ forensic1394_write_device_v = lib.forensic1394_write_device_v
 forensic1394_write_device_v.argtypes = [devptr,
                                         POINTER(forensic1394_req),
                                         c_size_t]
-forensic1394_write_device_v.restypes = c_int
+forensic1394_write_device_v.restype = c_int
 forensic1394_write_device_v.errcheck = process_result
 
 # Wrap the device CSR function
