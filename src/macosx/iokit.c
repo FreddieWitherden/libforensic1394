@@ -477,6 +477,9 @@ forensic1394_result convert_ioreturn(IOReturn i)
         case kIOReturnBusy:
             return FORENSIC1394_RESULT_BUSY;
             break;
+        case kIOReturnTimeout:
+            return FORENSIC1394_RESULT_IO_TIMEOUT;
+            break;
         case kIOFireWireBusReset:
             return FORENSIC1394_RESULT_BUS_RESET;
             break;
@@ -577,6 +580,8 @@ forensic1394_result send_requests(forensic1394_dev *dev, request_type t,
      */
     while (i < nreq || inPipeline > 0)
     {
+        SInt32 lret;
+
         // Send as many requests as possible
         for (j = 0; inPipeline < ncmd && j < ncmd && i < nreq; j++)
         {
@@ -601,13 +606,24 @@ forensic1394_result send_requests(forensic1394_dev *dev, request_type t,
         }
 
         // Wait for a response to a request
-        CFRunLoopRunInMode(CFSTR("libforensic1394"), 1.0, true);
-        inPipeline--;
+        lret = CFRunLoopRunInMode(CFSTR("libforensic1394"),
+                                  FORENSIC1394_TIMEOUT_MS * 1.0e-3, true);
 
-        // Check the return code
-        if (dev->pdev->cmdret != kIOReturnSuccess)
+        // So long as the loop did not timeout we're good
+        if (lret != kCFRunLoopRunTimedOut)
         {
-            ret = convert_ioreturn(dev->pdev->cmdret);
+            inPipeline--;
+
+            // Check the return code
+            if (dev->pdev->cmdret != kIOReturnSuccess)
+            {
+                ret = convert_ioreturn(dev->pdev->cmdret);
+                break;
+            }
+        }
+        else
+        {
+            ret = FORENSIC1394_RESULT_IO_TIMEOUT;
             break;
         }
     }
