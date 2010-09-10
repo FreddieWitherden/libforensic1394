@@ -91,7 +91,8 @@
  *  handle this by saving the GUIDs of any devices being accessed and then call
  *  ::forensic1394_get_devices.  Calling this will void all device handles.
  *  The new list of devices can then be iterated through and their GUIDs
- *  compared against saved GUIDs.
+ *  compared against saved GUIDs.  The GUID of a device can be obtained by
+ *  calling ::forensic1394_get_device_guid.
  *
  * \par Thread safety
  * libforensic1394 is thread safe at the device level with the restriction
@@ -159,7 +160,7 @@ typedef struct _forensic1394_req
  * \brief Number of uint32 elements required to store a device ROM.
  *
  * A FireWire configuration status ROM (CSR) is made up of unsigned 32-bit
- *  integers.  The maximum size of a ROM is 1024-bytes, giving 256 elements.
+ *  integers.  The maximum size of a ROM is 1024 bytes, giving 256 elements.
  */
 #define FORENSIC1394_CSR_SZ 256
 
@@ -326,7 +327,7 @@ forensic1394_set_bus_user_data(forensic1394_bus *bus, void *u);
  *   \param dev The device to open.
  *  \return A result status code.
  *
- * \a forensic1394_close_device
+ * \sa forensic1394_close_device
  */
 FORENSIC1394_DECL forensic1394_result
 forensic1394_open_device(forensic1394_dev *dev);
@@ -576,7 +577,7 @@ forensic1394_set_device_user_data(forensic1394_dev *dev, void *u);
  * \brief Converts a return status code to a string.
  *
  * Returns a textual representation of the return status code \a result.  The
- *  string returned is guarenteed to be valid for the lifetime of the program.
+ *  string returned is guaranteed to be valid for the lifetime of the program.
  *
  * In the event of an invalid code NULL is returned.
  *
