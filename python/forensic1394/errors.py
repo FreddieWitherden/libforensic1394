@@ -30,6 +30,7 @@ class ResultCode(object):
     Busy        = -4
     IOError     = -5
     IOSize      = -6
+    IOTimeout   = -7
 
 class Forensic1394Exception(Exception):
     pass

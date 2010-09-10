@@ -25,6 +25,9 @@
 #define FORENSIC1394_DEV_LIST_SZ 16
 #define FORENSIC1394_DEV_NAME_SZ 64
 
+/// Request timeout in milliseconds
+#define FORENSIC1394_TIMEOUT_MS  150
+
 typedef enum
 {
     REQUEST_TYPE_READ,

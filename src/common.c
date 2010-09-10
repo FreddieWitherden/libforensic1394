@@ -64,7 +64,8 @@ static const char *result_str[] =
     "Insufficient permisisons",
     "Device is busy",
     "General I/O error",
-    "Bad I/O request size"
+    "Bad I/O request size",
+    "I/O timeout"
 };
 
 static void forensic1394_destroy_all_devices(forensic1394_bus *bus);
@@ -421,9 +422,9 @@ void forensic1394_destroy_all_devices(forensic1394_bus *bus)
 const char *forensic1394_get_result_str(forensic1394_result r)
 {
     // Check the result is valid
-    if (r <= 0 &&  r > FORENSIC1394_RESULT_END)
+    if (r <= 0 && r > FORENSIC1394_RESULT_END)
     {
-        return result_str[abs(r)];
+        return result_str[-r];
     }
     // Invalid
     else

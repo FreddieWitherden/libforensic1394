@@ -209,8 +209,10 @@ typedef enum
     FORENSIC1394_RESULT_IO_ERROR    = -5,
     /// Bad transfer size (normally too large)
     FORENSIC1394_RESULT_IO_SIZE     = -6,
+    /// I/O Timeout
+    FORENSIC1394_RESULT_IO_TIMEOUT  = -7,
     /// Sentinel; internal use only
-    FORENSIC1394_RESULT_END         = -7
+    FORENSIC1394_RESULT_END         = -8
 } forensic1394_result;
 
 /**

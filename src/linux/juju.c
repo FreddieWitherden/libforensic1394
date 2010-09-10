@@ -490,8 +490,9 @@ forensic1394_result send_requests(forensic1394_dev *dev, request_type t,
         }
 
         // Wait for a response
-        poll(&fdp, 1, -1);
+        poll(&fdp, 1, FORENSIC1394_TIMEOUT_MS);
 
+        // If we got a response (and not a timeout)
         if (fdp.revents == POLLIN)
         {
             char buffer[16 * 1024];
@@ -551,6 +552,11 @@ forensic1394_result send_requests(forensic1394_dev *dev, request_type t,
             {
                 return FORENSIC1394_RESULT_IO_ERROR;
             }
+        }
+        // Poll timed out
+        else
+        {
+            return FORENSIC1394_RESULT_IO_TIMEOUT;
         }
     }
 
