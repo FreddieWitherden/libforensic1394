@@ -186,3 +186,9 @@ forensic1394_get_device_vendor_id.restype = c_int
 forensic1394_get_device_request_size  = lib.forensic1394_get_device_request_size
 forensic1394_get_device_request_size.argtypes = [devptr]
 forensic1394_get_device_request_size.restype = c_int
+
+# Wrap the error string function
+# C def: const char *forensic1394_get_result_str(forensic1394_result r);
+forensic1394_get_result_str = lib.forensic1394_get_result_str
+forensic1394_get_result_str.argtypes = [c_int]
+forensic1394_get_result_str.restype = c_char_p

@@ -45,11 +45,17 @@ class Forensic1394StaleHandle(Forensic1394Exception, IOError):
     pass
 
 def process_result(result, fn, args):
-    if result is ResultCode.Success:
-        return result
-    elif result is ResultCode.BusReset:
-        raise Forensic1394BusReset(fn.__name__ + ": A bus reset has occured")
-    elif result is ResultCode.NoPerm:
-        raise IOError(fn.__name__ + ": Permission denied")
+    # Call was successful
+    if result == ResultCode.Success:
+        return
+
+    # Perform a local import to avoid cyclic dependencies
+    from forensic1394.functions import forensic1394_get_result_str
+
+    err = fn.__name__ + ": " + forensic1394_get_result_str(result).decode()
+
+    # Decide which exception to throw
+    if result == ResultCode.BusReset:
+        raise Forensic1394BusReset(err)
     else:
-        raise IOError(fn.__name__)
+        raise IOError(err)
