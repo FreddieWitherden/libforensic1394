@@ -75,7 +75,18 @@
  * forensic1394_destroy(bus);
  * \endcode
  *
- * \par Handling bus resets
+ * \section sbp2 Enabling SBP-2
+ * In order to gain direct memory access to certain systems, namely Windows and
+ *  GNU/Linux, it is necessary to present the target system with an SBP-2 unit
+ *  directory.  This can be done by calling ::forensic1394_enable_sbp2.  It is
+ *  usual for devices on the bus to take a couple of seconds to react to this
+ *  change.  Therefore, client applications should ideally wait for ~2 seconds
+ *  before attempting to read or write to a device.  Although there are
+ *  provisions in the SBP-2 specification to determine when a target system has
+ *  enabled the DMA filter, client-side API limitations currently prevent
+ *  libforensic1394 from leveraging this.
+ *
+ * \section reset Handling Bus Resets
  * Bus resets occur when devices are added/removed from the system or when the
  *  configuration ROM of a device is updated.  The following methods are
  *  affected by bus resets:
@@ -85,8 +96,7 @@
  *   - ::forensic1394_write_device
  *   - ::forensic1394_write_device_v
  *
- * \par
- * After a bus reset calls to all three of these methods will result in
+ * After a bus reset calls to all of these methods will result in
  *  #FORENSIC1394_RESULT_BUS_RESET being returned.  Applications should
  *  handle this by saving the GUIDs of any devices being accessed and then call
  *  ::forensic1394_get_devices.  Calling this will void all device handles.
@@ -94,7 +104,7 @@
  *  compared against saved GUIDs.  The GUID of a device can be obtained by
  *  calling ::forensic1394_get_device_guid.
  *
- * \par Thread safety
+ * \section thread Thread Safety
  * libforensic1394 is thread safe at the device level with the restriction
  *  that devices can only be accessed by the thread that opened them.  This is
  *  because some backends, namely Mac OS X/IOKit, install thread-specific
