@@ -141,8 +141,13 @@ forensic1394_result platform_enable_sbp2(forensic1394_bus *bus,
 
     for (i = 0; i < globdev.gl_pathc; i++)
     {
-        struct fw_cdev_get_info get_info = {};
-        struct fw_cdev_event_bus_reset reset = {};
+        struct fw_cdev_event_bus_reset reset;
+
+        // Fill out an info request
+        struct fw_cdev_get_info get_info = {
+            .version   = FW_CDEV_VERSION,
+            .bus_reset = PTR_TO_U64(&reset)
+        };
 
         // Open up the device
         int fd = open(globdev.gl_pathv[i], O_RDWR);
@@ -160,11 +165,7 @@ forensic1394_result platform_enable_sbp2(forensic1394_bus *bus,
             continue;
         }
 
-        // Fill out an info request
-        get_info.version = FW_CDEV_VERSION;
-        get_info.bus_reset = PTR_TO_U64(&reset);
-
-        // Send the request (really should not fail)
+        // Send the info request (really should not fail)
         if (ioctl(fd, FW_CDEV_IOC_GET_INFO, &get_info) == -1)
         {
             continue;
@@ -187,11 +188,11 @@ forensic1394_result platform_enable_sbp2(forensic1394_bus *bus,
     // If we got a valid local file descriptor use it to update the CSR
     if (bus->pbus->sbp2_fd != -1)
     {
-        struct fw_cdev_add_descriptor add_desc = {};
-
-        add_desc.data   = PTR_TO_U64(sbp2dir);
-        add_desc.length = len;
-        add_desc.key    = (CSR_DIRECTORY | CSR_UNIT) << 24;
+        struct fw_cdev_add_descriptor add_desc = {
+            .data   = PTR_TO_U64(sbp2dir),
+            .length = len,
+            .key    = (CSR_DIRECTORY | CSR_UNIT) << 24
+        };
 
         // Attempt to add the SBP-2 unit directory
         if (ioctl(bus->pbus->sbp2_fd, FW_CDEV_IOC_ADD_DESCRIPTOR, &add_desc) == -1)
@@ -230,9 +231,17 @@ forensic1394_result platform_update_device_list(forensic1394_bus *bus)
     for (i = 0; i < globdev.gl_pathc; i++)
     {
         const char *devpath = globdev.gl_pathv[i];
-        struct fw_cdev_get_info get_info = {};
-        struct fw_cdev_event_bus_reset reset = {};
         uint32_t rom[FORENSIC1394_CSR_SZ];
+
+        struct fw_cdev_event_bus_reset reset;
+
+        // Fill out a get info request
+        struct fw_cdev_get_info get_info = {
+            .version    = FW_CDEV_VERSION,
+            .rom        = PTR_TO_U64(rom),
+            .rom_length = sizeof(rom),
+            .bus_reset  = PTR_TO_U64(&reset)
+        };
 
         // Open up the device
         int fd = open(devpath, O_RDWR);
@@ -250,16 +259,13 @@ forensic1394_result platform_update_device_list(forensic1394_bus *bus)
             continue;
         }
 
-        // Fill out an info request
-        get_info.version    = FW_CDEV_VERSION;
-        get_info.rom        = PTR_TO_U64(rom);
-        get_info.rom_length = sizeof(rom);
-        get_info.bus_reset  = PTR_TO_U64(&reset);
-
-        // Send the request
+        // Send the get info request
         if (ioctl(fd, FW_CDEV_IOC_GET_INFO, &get_info) == -1)
         {
-            perror("Get info ioctl");
+            // Highly unlikely; probably fatal
+            ret = FORENSIC1394_RESULT_OTHER_ERROR;
+            perm_skipped = -1;
+            break;
         }
 
         // See if the node is foreign (we only want attached devices)
