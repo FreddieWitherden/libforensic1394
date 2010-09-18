@@ -30,17 +30,16 @@
 
 /*
  * SBP-2 unit directory.  The entries are in the form <8-bit key><24-bit value>.
- * Precise definitions of the keys and associated values can be found in the
- * SBP-2 specification.
+ *  Precise definitions of the keys and associated values can be found in the
+ *  SBP-2 specification.
  *
- * The unit directory includes the number of elements in the directory as the
- * first entry.  However the CRC16 is *not* computed.  Platform APIs which do
- * not require the entry count (such as IOKit) should skip over the first
- * entry.
+ * The unit directory includes the number of entries and their CRC16 as the
+ *  first element.  Platform APIs which do not require this (such as IOKit)
+ *  should skip over this.
  */
 static const uint32_t sbp2_unit_dir[] =
 {
-    0x000d0000,     // # entries, 13 << 16
+    0x000dc4fc,     // # entries (13 << 16) and CRC16
     0x1200609e,     // Spec ID
     0x13010483,     // Version
     0x21000001,     // Revision
