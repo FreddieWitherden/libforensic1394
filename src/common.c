@@ -360,27 +360,7 @@ int forensic1394_get_device_request_size(forensic1394_dev *dev)
 {
     assert(dev);
 
-    /*
-     * The maximum request size is a 4-bit value starting at the 12th bit of the
-     * third element of the ROM.  The value is the base-2 logarithm of the
-     * maximum request size. (So a value of 10 corresponds to a size of 2^10 or
-     * 2048 bytes.) In the case where the second element of the ROM is not equal
-     * to 0x31333934 then the third element is interpreted as being
-     * bus-specific and hence ignored.
-     */
-    if (dev->rom[1] == 0x31333934)
-    {
-        // Extract lg size from the ROM
-        int lgsz = dev->rom[2] >> 12 & 0xf;
-
-        // Size in bytes is 2^lgsz
-        return 2 << lgsz;
-    }
-    // Otherwise just return the safe value of 512-bytes
-    else
-    {
-        return 512;
-    }
+    return dev->max_req;
 }
 
 void forensic1394_destroy_all_devices(forensic1394_bus *bus)

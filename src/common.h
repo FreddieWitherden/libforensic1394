@@ -61,6 +61,8 @@ struct _forensic1394_dev
     char vendor_name[FORENSIC1394_DEV_NAME_SZ];
     int vendor_id;
 
+    int max_req;
+
     int is_open;
 
     uint16_t nodeid;

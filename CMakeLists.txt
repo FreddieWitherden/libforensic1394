@@ -45,7 +45,9 @@ ENDIF()
 SET(FORENSIC1394_SRCS
     src/forensic1394.h
     src/common.h
-    src/common.c)
+    src/common.c
+    src/csr.h
+    src/csr.c)
 
 # Linux / Juju stack (others may be added later)
 IF("${CMAKE_SYSTEM}" MATCHES "Linux")

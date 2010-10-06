@@ -18,6 +18,7 @@
 */
 
 #include "common.h"
+#include "csr.h"
 
 #include <assert.h>
 
@@ -43,13 +44,6 @@
 #define PTR_TO_U64(p) ((__u64)(intptr_t)(p))
 #define U64_TO_PTR(p) ((void *)(intptr_t)(p))
 
-/*
- * These constants come from linux/drivers/firewire/fw-device.h and are used
- * as the `key' field when adding a local unit directory.
- */
-#define CSR_DIRECTORY   0xc0
-#define CSR_UNIT        0x11
-
 /**
  * The size of the request pipeline.  This determines how many asynchronous
  *  requests can be in the pipeline at any one time.  Due to serious bugs in
@@ -71,20 +65,6 @@ struct _platform_dev
 static forensic1394_dev *alloc_dev(const char *devpath,
                                    const struct fw_cdev_get_info *info,
                                    const struct fw_cdev_event_bus_reset *reset);
-
-/**
- * Attempts to read a firewire sysfs property for the firewire device specified
- *  by devpath.  The file is read and copied as a NUL-terminated string to
- *  contents, with a maximum of maxb bytes being copied. The trailing \n is
- *  stripped (and replaced with a NUL byte).
- *
- * devpath should be of the form /dev/fw<n>, where n is an integer.  The
- *  device name (fw<n>) is extracted from this and used to form the full sysfs
- *  path:
- *    /sys/bus/firewire/devices/fw<n>/<prop>
- */
-static void read_fw_sysfs_prop(const char *devpath, const char *prop,
-                               char *contents, size_t maxb);
 
 /**
  * Returns the most suitable TCODE for a given request.  Requests with a length
@@ -355,8 +335,6 @@ forensic1394_dev *alloc_dev(const char *devpath,
                             const struct fw_cdev_get_info *info,
                             const struct fw_cdev_event_bus_reset *reset)
 {
-    char tmp[128];
-
     // Allocate memory for a device (calloc initialises to 0)
     forensic1394_dev *dev = calloc(1, sizeof(forensic1394_dev));
 
@@ -376,69 +354,10 @@ forensic1394_dev *alloc_dev(const char *devpath,
     dev->nodeid     = reset->node_id;
     dev->generation = reset->generation;
 
-    // Product name
-    read_fw_sysfs_prop(devpath, "model_name",
-                       dev->product_name, sizeof(dev->product_name));
-
-    // Product ID
-    read_fw_sysfs_prop(devpath, "model", tmp, sizeof(tmp));
-    dev->product_id = strtol(tmp, NULL, 0);
-
-    // Vendor name
-    read_fw_sysfs_prop(devpath, "vendor_name",
-                       dev->vendor_name, sizeof(dev->vendor_name));
-
-    // Vendor ID
-    read_fw_sysfs_prop(devpath, "vendor", tmp, sizeof(tmp));
-    dev->vendor_id = strtol(tmp, NULL, 0);
-
-    // GUID
-    read_fw_sysfs_prop(devpath, "guid", tmp, sizeof(tmp));
-    dev->guid = strtoll(tmp, NULL, 0);
+    // Parse the CSR
+    common_parse_csr(dev);
 
     return dev;
-}
-
-void read_fw_sysfs_prop(const char *devpath, const char *prop,
-                        char *contents, size_t maxb)
-{
-    /*
-     * The sysfs properties reside in /sys/bus/firewire/devices/fw<n>/<prop>;
-     * when read they are presented as strings, ending with a \n. Hence to
-     * extract the property it is necessary to find the complete path given
-     * /dev/fw<n>; read the property into memry and nul-terminate it.
-     */
-    char sysfspath[128];
-    int fd;
-    ssize_t actualb;
-
-    // devpath is of the form /dev/fw<n> => (devpath + 5) = fw<n>
-    snprintf(sysfspath, sizeof(sysfspath), "/sys/bus/firewire/devices/%s/%s",
-             devpath + 5, prop);
-
-    // Zero the contents (ensures termination no matter what)
-    memset(contents, '\0', maxb);
-
-    // Open the file for reading
-    fd = open(sysfspath, O_RDONLY);
-
-    // Unable to open the property; usually because it does not exist
-    if (fd == -1)
-    {
-        return;
-    }
-
-    // Read the contents
-    actualb = read(fd, contents, maxb);
-
-
-    if (actualb > 0 && contents[actualb - 1] == '\n')
-    {
-        // The last character should be a \n; replace with a nul
-        contents[actualb - 1] = '\0';
-    }
-
-    close(fd);
 }
 
 static int request_tcode(const forensic1394_req *r, request_type t)

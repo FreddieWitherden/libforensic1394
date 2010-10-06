@@ -18,6 +18,7 @@
 */
 
 #include "common.h"
+#include "csr.h"
 
 #include <arpa/inet.h>  // For ntohl
 
@@ -124,26 +125,7 @@ static forensic1394_result send_requests(forensic1394_dev *dev,
                                          size_t nreq,
                                          size_t ncmd);
 
-static void copy_device_property_string(io_registry_entry_t dev,
-                                        CFStringRef prop,
-                                        char *buf,
-                                        size_t bufsiz);
-
-static void copy_device_property_int(io_registry_entry_t dev,
-                                     CFStringRef prop,
-                                     void *num,
-                                     CFNumberType type);
-
-static void copy_device_property_int32(io_registry_entry_t dev,
-                                       CFStringRef prop,
-                                       int32_t *num);
-
-static void copy_device_property_int64(io_registry_entry_t dev,
-                                       CFStringRef prop,
-                                       int64_t *num);
-
-static void copy_device_property_csr(io_registry_entry_t dev,
-                                     uint32_t *rom);
+static void copy_device_csr(io_registry_entry_t dev, uint32_t *rom);
 
 platform_bus *platform_bus_alloc()
 {
@@ -236,8 +218,8 @@ forensic1394_result platform_enable_sbp2(forensic1394_bus *bus,
     for (i = 1; i < len; i++)
     {
         // The entries are passed as <8-bit key><24-bit value>
-        UInt32 key      = sbp2dir[i] >> 24;
-        UInt32 value    = sbp2dir[i] & 0x00ffffff;
+        UInt32 key      = CSR_KEY(sbp2dir[i]);
+        UInt32 value    = CSR_VALUE(sbp2dir[i]);
 
         // Add the key-value pair to the local unit directory
         (*localUnitDir)->AddEntry_UInt32(localUnitDir, key, value, NULL);
@@ -326,25 +308,11 @@ forensic1394_result platform_update_device_list(forensic1394_bus *bus)
         // The device is not open
         fdev->is_open = 0;
 
-        // Get the product name
-        copy_device_property_string(currdev, CFSTR("FireWire Product Name"),
-                                    fdev->product_name, sizeof(fdev->product_name));
-
-        // Get the product id
-        copy_device_property_int32(currdev, CFSTR("Model_ID"), &fdev->product_id);
-
-        // Get the vendor name
-        copy_device_property_string(currdev, CFSTR("FireWire Vendor Name"),
-                                    fdev->vendor_name, sizeof(fdev->vendor_name));
-
-        // Get the vendor id
-        copy_device_property_int32(currdev, CFSTR("Vendor_ID"), &fdev->vendor_id);
-
-        // Get the GUID
-        copy_device_property_int64(currdev, CFSTR("GUID"), &fdev->guid);
-
         // Copy the ROM
-        copy_device_property_csr(currdev, fdev->rom);
+        copy_device_csr(currdev, fdev->rom);
+
+        // Parse the ROM to extract useful fragments
+        common_parse_csr(fdev);
 
         // Get the bus generation
         (*fdev->pdev->devIntrf)->GetBusGeneration(fdev->pdev->devIntrf,
@@ -634,96 +602,7 @@ forensic1394_result send_requests(forensic1394_dev *dev, request_type t,
     return ret;
 }
 
-void copy_device_property_string(io_registry_entry_t dev,
-                                 CFStringRef prop,
-                                 char *buf,
-                                 size_t bufsiz)
-{
-    // Attempt to extract the property as a CFString
-    CFStringRef propstr = IORegistryEntryCreateCFProperty(dev, prop, NULL, 0);
-
-    // Clear the property first
-    memset(buf, 0, bufsiz);
-
-    // Ensure that the property exists
-    if (propstr)
-    {
-        // And that it is really a CFString
-        if (CFGetTypeID(propstr) == CFStringGetTypeID())
-        {
-            // Copy the string to the buffer provided
-            CFStringGetCString(propstr, buf, bufsiz, kCFStringEncodingUTF8);
-        }
-        // Invalid property type
-        else
-        {
-            return;
-        }
-
-
-        // Release the string
-        CFRelease(propstr);
-    }
-    // Property not found
-    else
-    {
-        return;
-    }
-}
-
-void copy_device_property_int(io_registry_entry_t dev,
-                              CFStringRef prop,
-                              void *num,
-                              CFNumberType type)
-{
-    // Attempt to extract the property as a CFNumber
-    CFNumberRef propnum = IORegistryEntryCreateCFProperty(dev, prop, NULL, 0);
-
-    // Ensure that the property exists
-    if (propnum)
-    {
-        // And that it is really a CFNumber
-        if (CFGetTypeID(propnum) == CFNumberGetTypeID())
-        {
-            // Copy the number to the buffer provided
-            CFNumberGetValue(propnum, type, num);
-        }
-        // Invalid property type
-        else
-        {
-            return;
-        }
-
-        // Release the number
-        CFRelease(propnum);
-    }
-    // Property not found
-    else
-    {
-        return;
-    }
-}
-
-void copy_device_property_int32(io_registry_entry_t dev,
-                                CFStringRef prop,
-                                int32_t *num)
-{
-    *num = 0;
-
-    copy_device_property_int(dev, prop, num, kCFNumberSInt32Type);
-}
-
-void copy_device_property_int64(io_registry_entry_t dev,
-                                CFStringRef prop,
-                                int64_t *num)
-{
-    *num = 0;
-
-    copy_device_property_int(dev, prop, num, kCFNumberSInt64Type);
-}
-
-void copy_device_property_csr(io_registry_entry_t dev,
-                              uint32_t *rom)
+void copy_device_csr(io_registry_entry_t dev, uint32_t *rom)
 {
     // Attempt to extract the "FireWire Device ROM" property
     CFDictionaryRef romdict = IORegistryEntryCreateCFProperty(dev,
