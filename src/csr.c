@@ -19,8 +19,6 @@
 
 #include "csr.h"
 
-#include <assert.h>
-
 #include <string.h>
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -152,7 +150,7 @@ size_t get_length(const uint32_t *rom, size_t diroff)
 void parse_key(const uint32_t *rom, size_t diroff, int key,
                int *value, char *bufval, size_t buflen)
 {
-    int i;
+    size_t i;
     size_t nq = get_length(rom, diroff);
 
     for (i = 1; i < nq; i++)
@@ -184,7 +182,7 @@ void parse_key(const uint32_t *rom, size_t diroff, int key,
 void parse_text_leaf(const uint32_t *rom, size_t offset,
                      char *buf, size_t maxb)
 {
-    int i;
+    size_t i;
     size_t numq, numb;
 
     // Zero the string to ensure termination
