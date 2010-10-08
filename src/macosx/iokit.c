@@ -127,10 +127,7 @@ static void copy_device_csr(io_registry_entry_t dev, uint32_t *rom);
 
 platform_bus *platform_bus_alloc()
 {
-    platform_bus *pbus = malloc(sizeof(platform_bus));
-
-    pbus->localDev      = NULL;
-    pbus->localUnitDir  = NULL;
+    platform_bus *pbus = calloc(1, sizeof(platform_bus));
 
     return pbus;
 }
