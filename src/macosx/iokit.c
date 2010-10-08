@@ -20,8 +20,6 @@
 #include "common.h"
 #include "csr.h"
 
-#include <arpa/inet.h>  // For ntohl
-
 #include <CoreFoundation/CoreFoundation.h>
 #include <IOKit/IOKitLib.h>
 #include <IOKit/firewire/IOFireWireLib.h>
@@ -640,7 +638,7 @@ void copy_device_csr(io_registry_entry_t dev, uint32_t *rom)
                     // Convert from big-endian to CPU-endian (no-op on PPC Macs)
                     for (i = 0; i < (datarange.length / sizeof(uint32_t)); i++)
                     {
-                        rom[i] = ntohl(rom[i]);
+                        rom[i] = CSR_SWAP_QUADLET(rom[i]);
                     }
                 }
 

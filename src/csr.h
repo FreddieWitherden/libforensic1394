@@ -31,6 +31,20 @@
 #define CSR_DIRECTORY   0xc0
 #define CSR_UNIT        0x11
 
+#define CSR_REGISTER_BASE   ((int64_t) 0xfffff0000000)
+
+#define CSR_CONFIG_ROM      0x400
+#define CSR_CONFIG_ROM_END  0x800
+
+#ifdef FORENSIC1394_LITTLE_ENDIAN
+#define CSR_SWAP_QUADLET(x) ((x >> 24)             \
+                           | (x << 8 & 0x00ff0000) \
+                           | (x >> 8 & 0x0000ff00) \
+                           | (x << 24))
+#else
+#define CSR_SWAP_QUADLET(x) (x)
+#endif
+
 /**
  * Extracts important artifacts fom dev->rom including the GUID of the device,
  *  including the maximum request size and product/vendor information.  This
