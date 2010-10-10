@@ -91,7 +91,7 @@ platform_bus *platform_bus_alloc(void)
     return pbus;
 }
 
-void platform_bus_destory(forensic1394_bus *bus)
+void platform_bus_destroy(forensic1394_bus *bus)
 {
     // If the SBP-2 unit directory is enabled close its fd
     if (bus->sbp2_enabled)

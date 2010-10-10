@@ -132,7 +132,7 @@ platform_bus *platform_bus_alloc()
     return pbus;
 }
 
-void platform_bus_destory(forensic1394_bus *bus)
+void platform_bus_destroy(forensic1394_bus *bus)
 {
     // Un-publish any changes we made to the CSR
     if (bus->sbp2_enabled)

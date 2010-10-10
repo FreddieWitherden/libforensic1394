@@ -109,7 +109,7 @@ void forensic1394_destroy(forensic1394_bus *bus)
     forensic1394_destroy_all_devices(bus);
 
     // Delegate
-    platform_bus_destory(bus);
+    platform_bus_destroy(bus);
 
     // Free the bus
     free(bus);

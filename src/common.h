@@ -80,7 +80,7 @@ struct _forensic1394_dev
 
 platform_bus *platform_bus_alloc(void);
 
-void platform_bus_destory(forensic1394_bus *bus);
+void platform_bus_destroy(forensic1394_bus *bus);
 
 forensic1394_result platform_enable_sbp2(forensic1394_bus *bus,
                                          const uint32_t *sbp2dir, size_t len);
