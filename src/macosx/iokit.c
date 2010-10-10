@@ -635,7 +635,7 @@ void copy_device_csr(io_registry_entry_t dev, uint32_t *rom)
                     // Convert from big-endian to CPU-endian (no-op on PPC Macs)
                     for (i = 0; i < (datarange.length / sizeof(uint32_t)); i++)
                     {
-                        rom[i] = CSR_SWAP_QUADLET(rom[i]);
+                        rom[i] = CSR_HOST_QUADLET(rom[i]);
                     }
                 }
 

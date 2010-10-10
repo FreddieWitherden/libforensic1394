@@ -37,12 +37,12 @@
 #define CSR_CONFIG_ROM_END  0x800
 
 #ifdef FORENSIC1394_LITTLE_ENDIAN
-#define CSR_SWAP_QUADLET(x) ((x >> 24)             \
+#define CSR_HOST_QUADLET(x) ((x >> 24)             \
                            | (x << 8 & 0x00ff0000) \
                            | (x >> 8 & 0x0000ff00) \
                            | (x << 24))
 #else
-#define CSR_SWAP_QUADLET(x) (x)
+#define CSR_HOST_QUADLET(x) (x)
 #endif
 
 /**
