@@ -1,0 +1,119 @@
+             Known Bugs & Limitations in libforensic1394
+
+Introduction
+
+  libforensic1394 is  a thin wrapper around the  platforms native IEEE
+  1394 stack.  As a consequence of  this the vast majority of bugs can
+  be traced back  to either faults in the underlying  1394 stack or to
+  hardware misconfiguration/incompatibility.  Where  the 1394 stack is
+  believed  to  be at  fault  bug reports  have  been  filed with  the
+  relevant parties.
+
+Platform Agnostic Issues
+
+  Timeout required aft7er adding an SBP-2 unit directory
+
+    After adding an  SBP-2 unit directory to a bus  it is necessary to
+    wait for ~2 seconds before  attempting to read/write from a device
+    on the bus.  This is required  in order to give devices on the bus
+    time to respond  to the presence of such  a directory.  (The usual
+    course of action being to bring down the physical request filter.)
+
+    While  there  are provisions  in  the  specification to  determine
+    precisely  when a  device has  brought down  its  physical request
+    filter   limitations  in   Linux/Juju  stack   pre-2.6.36  prevent
+    user-space applications from leveraging this.
+
+  Multiple SBP-2 unit directories can be added to a bus
+
+    Should  two  or  more  applications, each  using  libforensic1394,
+    enable SBP-2 support then it  is possible that multiple SBP-2 unit
+    directories will appear in the ROM of the host.
+
+    As the presence  of multiple directories is harmless  there are no
+    plans to  prevent such a situation from  occurring.  Moreover, the
+    design of modern 1394 stacks  would make enforcing the presence of
+    only one such directory extremely difficult.
+
+Linux/Juju Specific Issues
+
+  Asynchronous requests considered harmful
+
+    The  Juju stack  contains one  or  more race  conditions that  can
+    result  in  kernel-mode GPFs  (“General  Protection Faults”)  when
+    asynchronous requests are used.   Such faults nearly always result
+    in a kernel  panic.  The probability of such a  fault has found to
+    depend  on both  the  make/model of  the  OHCI and  the number  of
+    asynchronous requests.
+
+    libforensic1394  currently works  around this  issue  by disabling
+    asynchronous requests under Linux/Juju.   This is done by defining
+    REQUEST_PIPELINE_SZ to be 1 in linux/juju.c.
+
+    Further information can be found in the following report:
+    
+      https://bugzilla.kernel.org/show_bug.cgi?id=18292
+
+Mac OS X Specific Issues
+
+  Opening and closing a device multiple times
+
+    Attempting to  open a device which has  already been opened/closed
+    can  result in  a kernel  panic.   Although the  precise cause  is
+    unknown  it is  believed to  be  related to  several other  kernel
+    panics in the Apple FireWire stack.
+
+    Should an  application need to open/close a  device multiple times
+    it should do so by re-requesting the device list each time.
+
+  Occasional kernel panics under high-load
+
+    Under high-load conditions some  kernel panics have been observed.
+    The resulting  stack trace  is identical to  that which  can occur
+    when attempting to open a previously closed device.
+
+    Little is known about the  precise cause of the problem however it
+    is believed to be related to the use of asynchronous requests.  If
+    this is  the case it  may become necessary  to disable the  use of
+    asynchronous requests under Mac OS X.
+
+  Incomplete CSR for attached devices
+
+    There exist some issues  with regards to getting the Configuration
+    Status ROM which can result in the ROM being truncated.  The cause
+    of this  is currently  unknown; however, it  is observed  in other
+    FireWire  applications (such as  IORegistryExplorer) and  hence is
+    believed to be an IOKit problem.
+
+    While this is not normally an issue (the crucial components of the
+    CSR,  such as  the GUID,  have always  been  present) applications
+    which  require the  complete ROM  can  read it  manually from  the
+    device.  The  relevant offsets for  performing such a read  can be
+    found in csr.h.
+
+  Windows targets report Mac OS X hosts as an unidentified device
+
+    When connecting a Mac OS X  host to an unlocked Windows target the
+    “New  Hardware Wizard”  may  appear.   This is  because  Mac OS  X
+    advertises  support for  IPv6 over  1394 (RFC  3146) —  a protocol
+    which  Windows does not  recognise.  This  manifests itself  as an
+    “Unknown  Device” in  the device  manager  with a  hardware ID  of
+    `1394\5E&2`.   Although not  harmful  (libforensic1394 will  still
+    function  as  expected)  it  is  something  of  a  nuisance.   One
+    workaround  to this  is to  unload the  `IOFireWireIP.kext` kernel
+    module to prevent OS X  from advertising support for IPv[4,6] over
+    1394:
+
+      $ sudo kextunload /System/Library/Extensions/IOFireWireIP.kext
+
+    It  is important  to  run  this before  any  FireWire devices  are
+    connected  to the  system.   Connecting a  device  will cause  the
+    retain count for the module to be incremented; making it difficult
+    to  unload the  module until  the system  is restarted.   If later
+    required the module can be reloaded by issuing:
+
+      $ sudo kextload /System/Library/Extensions/IOFireWireIP.kext
+
+    As Linux/Juju only supports IPv4 over 1394 it is unaffected.  (All
+    recent  Windows versions  either  support IPv4  over  1394 or  are
+    capable of filtering it from the device list.)
