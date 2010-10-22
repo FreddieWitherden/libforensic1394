@@ -68,15 +68,13 @@ IF("${CMAKE_SYSTEM}" MATCHES "Linux")
         MESSAGE(FATAL "linux/firewire-cdev.h not found!")
     ENDIF()
 
-    SET(FORENSIC1394_SRCS ${FORENSIC1394_SRCS}
-        src/linux/juju.c)
+    LIST(APPEND FORENSIC1394_SRCS src/linux/juju.c)
 # Mac OS X / IOKit
 ELSEIF(APPLE)
     # Ensure we link to IOKit for firewire access
-    SET(OTHER_LDFLAGS ${OTHER_LDFLAGS} "-framework CoreFoundation -framework IOKit")
+    LIST(APPEND OTHER_LDFLAGS "-framework CoreFoundation -framework IOKit")
 
-    SET(FORENSIC1394_SRCS ${FORENSIC1394_SRCS}
-        src/macosx/iokit.c)
+    LIST(APPEND FORENSIC1394_SRCS src/macosx/iokit.c)
 # Windows or BSD; currently unsupported
 ELSE()
     MESSAGE(FATAL "Currently only Mac OS X and GNU/Linux are supported!")
@@ -87,7 +85,7 @@ IF(FORENSIC1394_BUILD_STATIC)
     ADD_LIBRARY(forensic1394-static STATIC ${FORENSIC1394_SRCS})
     SET_TARGET_PROPERTIES(forensic1394-static PROPERTIES OUTPUT_NAME "forensic1394")
     SET(FORENSIC1394_LIB_TARGET forensic1394-static)
-    SET(FORENSIC1394_INSTALL_TARGETS ${FORENSIC1394_INSTALL_TARGETS} ";forensic1394-static")
+    LIST(APPEND FORENSIC1394_INSTALL_TARGETS ";forensic1394-static")
 ENDIF()
 
 OPTION(FORENSIC1394_BUILD_SHARED "Build shared library" TRUE)
@@ -97,7 +95,7 @@ IF(FORENSIC1394_BUILD_SHARED)
     SET_TARGET_PROPERTIES(forensic1394 PROPERTIES SOVERSION ${FORENSIC1394_SOVERSION})
     TARGET_LINK_LIBRARIES(forensic1394 ${OPTIONAL_LIBRARY_LIBS} ${OTHER_LDFLAGS})
     SET(FORENSIC1394_LIB_TARGET forensic1394)
-    SET(FORENSIC1394_INSTALL_TARGETS ${FORENSIC1394_INSTALL_TARGETS} ";forensic1394")
+    LIST(APPEND FORENSIC1394_INSTALL_TARGETS ";forensic1394")
 ENDIF()
 
 # Must build either a shared or static library
@@ -140,7 +138,7 @@ FIND_PROGRAM(FORENSIC1394_HAVE_RPMBUILD rpmbuild)
 
 IF(FORENSIC1394_HAVE_DPKG)
     MESSAGE(STATUS "Dpkg found. Enabling Debian packages.")
-    SET(CPACK_GENERATOR ${CPACK_GENERATOR} DEB)
+    LIST(APPEND CPACK_GENERATOR DEB)
 
     # Debian packages really should have a valid maintainer
     IF(NOT CPACK_DEBIAN_PACKAGE_MAINTAINER)
@@ -152,7 +150,7 @@ ENDIF()
 
 IF(FORENSIC1394_HAVE_RPMBUILD)
     MESSAGE(STATUS "Rpmbuild found. Enabling RPM packages.")
-    SET(CPACK_GENERATOR ${CPACK_GENERATOR} RPM)
+    LIST(APPEND CPACK_GENERATOR RPM)
 ENDIF()
 
 INCLUDE(CPack)
