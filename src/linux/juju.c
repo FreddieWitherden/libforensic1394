@@ -250,16 +250,10 @@ forensic1394_result platform_update_device_list(forensic1394_bus *bus)
             // Save a reference to the bus
             currdev->bus = bus;
 
-            // See if we need to extend the device list; +1 as the last device
-            // is always NULL, hence taking up a slot
-            if (bus->ndev + 1 == bus->size)
-            {
-                bus->size += FORENSIC1394_DEV_LIST_SZ;
-                bus->dev = realloc(bus->dev, sizeof(forensic1394_dev *) * bus->size);
-            }
-
             // Add this new device to the device list
-            bus->dev[bus->ndev++] = currdev;
+            currdev->next = bus->dev_link;
+            bus->dev_link = currdev;
+            bus->ndev++;
         }
 
         // Close the device (it may be opened up later)

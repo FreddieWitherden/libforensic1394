@@ -22,7 +22,6 @@
 
 #include "forensic1394.h"
 
-#define FORENSIC1394_DEV_LIST_SZ 16
 #define FORENSIC1394_DEV_NAME_SZ 64
 
 /// Request timeout in milliseconds
@@ -43,8 +42,9 @@ struct _forensic1394_bus
     int sbp2_enabled;
 
     forensic1394_dev **dev;
+    forensic1394_dev *dev_link;
+
     int ndev;
-    int size;
 
     void *user_data;
 
@@ -76,6 +76,8 @@ struct _forensic1394_dev
 
     platform_dev *pdev;
     forensic1394_bus *bus;
+
+    forensic1394_dev *next;
 };
 
 platform_bus *platform_bus_alloc(void);

@@ -83,8 +83,8 @@ forensic1394_bus *forensic1394_alloc(void)
 
     // We have no devices (yet!)
     b->dev = NULL;
+    b->dev_link = NULL;
     b->ndev = 0;
-    b->size = 0;
 
     // No ondestroy callback
     b->ondestroy = NULL;
@@ -156,22 +156,27 @@ forensic1394_dev **forensic1394_get_devices(forensic1394_bus *bus,
                                             int *ndev,
                                             forensic1394_device_callback ondestroy)
 {
+    int i = 0;
+
     forensic1394_result ret;
+    forensic1394_dev *cdev;
 
     assert(bus);
 
     // Void the current device list, freeing any memory associated with it
     forensic1394_destroy_all_devices(bus);
 
-    // Allocate some space for the initial device list
-    bus->dev = malloc(sizeof(forensic1394_dev *) * FORENSIC1394_DEV_LIST_SZ);
-    bus->size = FORENSIC1394_DEV_LIST_SZ;
-
     // Update the device list
     ret = platform_update_device_list(bus);
 
-    // Ensure we have space to NULL terminate
-    assert(bus->ndev < bus->size);
+    // Allocate space for the device array and sentinel
+    bus->dev = malloc(sizeof(forensic1394_dev *) * (bus->ndev + 1));
+
+    // Copy the linked list of devices to the array
+    for (cdev = bus->dev_link; cdev; cdev = cdev->next)
+    {
+	bus->dev[i++] = cdev;
+    }
 
     // NULL terminate the last item in the list
     bus->dev[bus->ndev] = NULL;
@@ -365,37 +370,40 @@ int forensic1394_get_device_request_size(forensic1394_dev *dev)
 
 void forensic1394_destroy_all_devices(forensic1394_bus *bus)
 {
-    int i;
+    forensic1394_dev *cdev, *ndev;
 
     assert(bus);
 
-    for (i = 0; i < bus->ndev; i++)
+    for (cdev = bus->dev_link; cdev; cdev = ndev)
     {
+	// Save a reference to the next device
+	ndev = cdev->next;
+
         // First, close the device if it is open
-        if (forensic1394_is_device_open(bus->dev[i]))
+        if (forensic1394_is_device_open(cdev))
         {
-            forensic1394_close_device(bus->dev[i]);
+            forensic1394_close_device(cdev);
         }
 
         // If a device-destroy callback is set; call it
         if (bus->ondestroy)
         {
-            bus->ondestroy(bus, bus->dev[i]);
+            bus->ondestroy(bus, cdev);
         }
 
         // Next call the platform specific destruction routine
-        platform_device_destroy(bus->dev[i]);
+        platform_device_destroy(cdev);
 
         // Finally, free the general device structure (everything is static)
-        free(bus->dev[i]);
+        free(cdev);
     }
 
     // Free the device list itself (may be NULL, but still okay)
     free(bus->dev);
 
     bus->dev = NULL;
+    bus->dev_link = NULL;
     bus->ndev = 0;
-    bus->size = 0;
 }
 
 const char *forensic1394_get_result_str(forensic1394_result r)
