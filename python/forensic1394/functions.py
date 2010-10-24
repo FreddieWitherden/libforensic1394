@@ -146,10 +146,10 @@ forensic1394_get_device_csr.argtypes = [devptr, POINTER(c_uint32)]
 forensic1394_get_device_csr.restype = None
 
 # Wrap the device node id function
-# C def: uint16_t forensic1394_get_device_nodeid(forensic1394_dev *dev)
-forensic1394_get_device_nodeid = lib.forensic1394_get_device_nodeid
-forensic1394_get_device_nodeid.argtypes = [devptr]
-forensic1394_get_device_nodeid.restype = c_uint16
+# C def: uint16_t forensic1394_get_device_node_id(forensic1394_dev *dev)
+forensic1394_get_device_node_id = lib.forensic1394_get_device_node_id
+forensic1394_get_device_node_id.argtypes = [devptr]
+forensic1394_get_device_node_id.restype = c_uint16
 
 # Wrap the device guid function
 # C def: int64_t forensic1394_get_device_guid(forensic1394_dev *dev)

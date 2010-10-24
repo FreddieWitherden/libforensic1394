@@ -29,7 +29,7 @@ from forensic1394.functions import forensic1394_open_device, \
                                    forensic1394_read_device_v, \
                                    forensic1394_write_device_v, \
                                    forensic1394_get_device_csr, \
-                                   forensic1394_get_device_nodeid, \
+                                   forensic1394_get_device_node_id, \
                                    forensic1394_get_device_guid, \
                                    forensic1394_get_device_product_name, \
                                    forensic1394_get_device_product_id, \
@@ -66,7 +66,7 @@ class Device(object):
         self._stale = False
 
         # Copy over the device properties
-        self._nodeid = forensic1394_get_device_nodeid(self)
+        self._node_id = forensic1394_get_device_node_id(self)
         self._guid = forensic1394_get_device_guid(self)
 
         self._product_name = forensic1394_get_device_product_name(self)
@@ -208,11 +208,11 @@ class Device(object):
         forensic1394_write_device_v(self, creq, len(creq))
 
     @property
-    def nodeid(self):
+    def node_id(self):
         """
         The node ID of the device on the bus.
         """
-        return self._nodeid
+        return self._node_id
 
     @property
     def guid(self):

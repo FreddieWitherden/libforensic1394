@@ -312,11 +312,11 @@ void forensic1394_get_device_csr(forensic1394_dev *dev, uint32_t *rom)
     memcpy(rom, dev->rom, sizeof(dev->rom));
 }
 
-uint16_t forensic1394_get_device_nodeid(forensic1394_dev *dev)
+uint16_t forensic1394_get_device_node_id(forensic1394_dev *dev)
 {
     assert(dev);
 
-    return dev->nodeid;
+    return dev->node_id;
 }
 
 int64_t forensic1394_get_device_guid(forensic1394_dev *dev)

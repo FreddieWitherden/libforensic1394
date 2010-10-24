@@ -322,7 +322,7 @@ forensic1394_dev *alloc_dev(const char *devpath,
     memcpy(dev->rom, U64_TO_PTR(info->rom), info->rom_length);
 
     // Same with the node ID and generation
-    dev->nodeid     = reset->node_id;
+    dev->node_id    = reset->node_id;
     dev->generation = reset->generation;
 
     // Parse the CSR

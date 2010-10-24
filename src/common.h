@@ -65,7 +65,7 @@ struct _forensic1394_dev
 
     int is_open;
 
-    uint16_t nodeid;
+    uint16_t node_id;
     uint32_t generation;
 
     int64_t guid;

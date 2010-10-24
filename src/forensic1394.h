@@ -480,7 +480,7 @@ forensic1394_get_device_csr(forensic1394_dev *dev,
  *  \return The node ID of the device.
  */
 FORENSIC1394_DECL uint16_t
-forensic1394_get_device_nodeid(forensic1394_dev *dev);
+forensic1394_get_device_node_id(forensic1394_dev *dev);
 
 /**
  * \brief Returns the GUID of the device.

@@ -319,7 +319,7 @@ forensic1394_result platform_update_device_list(forensic1394_bus *bus)
                                                  &nodeid);
 
         fdev->generation = generation;
-        fdev->nodeid = nodeid;
+        fdev->node_id = nodeid;
 
         // Add this new device to the device list
         fdev->next = bus->dev_link;
