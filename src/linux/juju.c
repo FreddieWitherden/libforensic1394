@@ -73,15 +73,6 @@ static forensic1394_dev *alloc_dev(const char *devpath,
  */
 static inline int request_tcode(const forensic1394_req* r, request_type t);
 
-/**
- * Generic request-issuing function which can be used to make either read/write
- *  requests depending on the value of \a t.
- */
-static forensic1394_result send_requests(forensic1394_dev *dev,
-                                         request_type t,
-                                         const forensic1394_req *req,
-                                         size_t nreq);
-
 platform_bus *platform_bus_alloc(void)
 {
     platform_bus *pbus = malloc(sizeof(platform_bus));
@@ -317,20 +308,6 @@ void platform_close_device(forensic1394_dev *dev)
     close(dev->pdev->fd);
 }
 
-forensic1394_result platform_read_device_v(forensic1394_dev *dev,
-                                           forensic1394_req *req,
-                                           size_t nreq)
-{
-    return send_requests(dev, REQUEST_TYPE_READ, req, nreq);
-}
-
-forensic1394_result platform_write_device_v(forensic1394_dev *dev,
-                                            const forensic1394_req *req,
-                                            size_t nreq)
-{
-    return send_requests(dev, REQUEST_TYPE_WRITE, req, nreq);
-}
-
 forensic1394_dev *alloc_dev(const char *devpath,
                             const struct fw_cdev_get_info *info,
                             const struct fw_cdev_event_bus_reset *reset)
@@ -374,9 +351,10 @@ static int request_tcode(const forensic1394_req *r, request_type t)
     }
 }
 
-forensic1394_result send_requests(forensic1394_dev *dev, request_type t,
-                                  const forensic1394_req *req,
-                                  size_t nreq)
+forensic1394_result platform_send_requests(forensic1394_dev *dev,
+                                           request_type t,
+                                           const forensic1394_req *req,
+                                           size_t nreq)
 {
     int i = 0;
     int in_pipeline = 0;

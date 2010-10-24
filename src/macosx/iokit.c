@@ -409,25 +409,18 @@ void platform_close_device(forensic1394_dev *dev)
     (*dev->pdev->devIntrf)->Close(dev->pdev->devIntrf);
 }
 
-forensic1394_result platform_read_device_v(forensic1394_dev *dev,
-                                           forensic1394_req *req,
+forensic1394_result platform_send_requests(forensic1394_dev *dev,
+                                           request_type type,
+                                           const forensic1394_req *req,
                                            size_t nreq)
 {
-    // Decide how many commands to use for the read
-    int ncmd = (nreq > FORENSIC1394_NUM_READ_CMD) ? FORENSIC1394_NUM_READ_CMD : nreq;
+    // Determine the maximum number of commands we can use
+    int nmaxcmd = (type == REQUEST_TYPE_READ) ? FORENSIC1394_NUM_READ_CMD
+                                              : FORENSIC1394_NUM_WRITE_CMD;
+    int ncmd = (nreq > nmaxcmd) ? nmaxcmd : nreq;
 
-    // Using these commands make the requests
-    return send_requests(dev, REQUEST_TYPE_READ, req, nreq, ncmd);
-}
-
-forensic1394_result platform_write_device_v(forensic1394_dev *dev,
-                                            const forensic1394_req *req,
-                                            size_t nreq)
-{
-    // Decide how many commands to use for the write
-    int ncmd = (nreq > FORENSIC1394_NUM_WRITE_CMD) ? FORENSIC1394_NUM_WRITE_CMD : nreq;
-
-    return send_requests(dev, REQUEST_TYPE_WRITE, req, nreq, ncmd);
+    // Dispatch to the internal send_requests method
+    return send_requests(dev, type, req, nreq, ncmd);
 }
 
 forensic1394_result convert_ioreturn(IOReturn i)

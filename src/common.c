@@ -257,7 +257,7 @@ forensic1394_result forensic1394_read_device(forensic1394_dev *dev,
     r.len   = len;
     r.buf   = buf;
 
-    return platform_read_device_v(dev, &r, 1);
+    return platform_send_requests(dev, REQUEST_TYPE_READ, &r, 1);
 }
 
 forensic1394_result forensic1394_read_device_v(forensic1394_dev *dev,
@@ -268,7 +268,7 @@ forensic1394_result forensic1394_read_device_v(forensic1394_dev *dev,
     assert(dev->is_open);
     assert(req);
 
-    return platform_read_device_v(dev, req, nreq);
+    return platform_send_requests(dev, REQUEST_TYPE_READ, req, nreq);
 }
 
 forensic1394_result forensic1394_write_device(forensic1394_dev *dev,
@@ -286,7 +286,7 @@ forensic1394_result forensic1394_write_device(forensic1394_dev *dev,
     r.len   = len;
     r.buf   = buf;
 
-    return platform_write_device_v(dev, &r, 1);
+    return platform_send_requests(dev, REQUEST_TYPE_WRITE, &r, 1);
 }
 
 forensic1394_result forensic1394_write_device_v(forensic1394_dev *dev,
@@ -296,7 +296,7 @@ forensic1394_result forensic1394_write_device_v(forensic1394_dev *dev,
     assert(dev);
     assert(dev->is_open);
 
-    return platform_write_device_v(dev, req, nreq);
+    return platform_send_requests(dev, REQUEST_TYPE_WRITE, req, nreq);
 }
 
 void forensic1394_get_device_csr(forensic1394_dev *dev, uint32_t *rom)
