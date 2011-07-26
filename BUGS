@@ -11,7 +11,7 @@ Introduction
 
 Platform Agnostic Issues
 
-  Timeout required aft7er adding an SBP-2 unit directory
+  Timeout required after adding an SBP-2 unit directory
 
     After adding an  SBP-2 unit directory to a bus  it is necessary to
     wait for ~2 seconds before  attempting to read/write from a device
@@ -53,6 +53,24 @@ Linux/Juju Specific Issues
     Further information can be found in the following report:
     
       https://bugzilla.kernel.org/show_bug.cgi?id=18292
+
+  Spurious warnings when firewire-sbp2 is loaded
+
+    When the  firewire-sbp2 module  is loaded into  the kernel  use of
+    libforensic1394 may result in kernel messages along the lines of:
+
+      firewire_sbp2: fw0.0: orb reply timed out, rcode=0x11
+
+    If an  SBP-2 unit directory is added  to the CSR of  a  local port
+    the firewire-sbp2 driver is notified and treats it as if it were a
+    bona fide  SBP-2 device.  However, since  libforensic1394 does not
+    implement  any of the  SBP-2 specification  the requests  from the
+    driver   time   out.   This   causes   various   warnings  to   be
+    generated. Although  the presence  of the firewire-sbp2  module is
+    not  believed to  be  harmful  the messages  can  be supressed  by
+    removing it prior to using libforensic1394:
+
+      modprobe -r firewire_sbp2
 
 Mac OS X Specific Issues
 
