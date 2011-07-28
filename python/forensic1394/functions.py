@@ -117,7 +117,7 @@ forensic1394_read_device_v.argtypes = [devptr,
                                        POINTER(forensic1394_req),
                                        c_size_t]
 forensic1394_read_device_v.restype = c_int
-forensic1394_read_device.errcheck = process_result
+forensic1394_read_device_v.errcheck = process_result
 
 # Wrap the write device function
 # C def: forensic1394_result forensic1394_write_device(forensic1394_dev *dev,
