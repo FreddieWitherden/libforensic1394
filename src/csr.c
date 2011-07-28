@@ -210,7 +210,7 @@ void parse_text_leaf(const uint32_t *rom, size_t offset,
     {
         const int shift[] = { 24, 16, 8, 0 };
         
-        // Copy the byte over in an endian-neutral mannor
+        // Copy the byte over in an endian-neutral manor
         buf[i] = (*(rom + i/4) >> shift[i%4]) & 0xff;
     }
 }
