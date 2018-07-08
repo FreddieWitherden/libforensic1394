@@ -21,7 +21,7 @@ INCLUDE_DIRECTORIES(./src)
 
 IF(CMAKE_COMPILER_IS_GNUCC)
     # The more warnings the better
-    ADD_DEFINITIONS(-g -pipe -Werror -fsigned-char -Wall)
+    ADD_DEFINITIONS(-g -pipe -fsigned-char -Wall)
 
     CHECK_C_SOURCE_COMPILES("
         #if ((defined(__GNUC__)) && (__GNUC__ >= 4))
