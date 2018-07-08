@@ -313,7 +313,7 @@ forensic1394_dev *alloc_dev(const char *devpath,
     dev->pdev = malloc(sizeof(platform_dev));
 
     // Copy the device path into the platform specific structure
-    strncpy(dev->pdev->path, devpath, sizeof(dev->pdev->path));
+    snprintf(dev->pdev->path, sizeof(dev->pdev->path), "%s", devpath);
 
     // Mark the file descriptor as invalid
     dev->pdev->fd = -1;
